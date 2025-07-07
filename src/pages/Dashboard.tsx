@@ -10,11 +10,9 @@ import {
   Users, 
   Calendar, 
   Target, 
-  TrendingUp, 
   Award,
   Clock,
   MapPin,
-  ExternalLink,
   Plus
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -73,7 +71,6 @@ const Dashboard = () => {
   return (
     <DashboardLayout>
       <div className="space-y-6 animate-fade-in">
-        {/* Welcome Section */}
         <div className="bg-dicey-azure rounded-xl p-6 text-white">
           <div className="flex items-start justify-between">
             <div>
@@ -101,7 +98,6 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {stats.map((stat, index) => (
             <Card key={index} className="transition-all hover:shadow-md">
@@ -121,7 +117,6 @@ const Dashboard = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Recent Projects */}
           <div className="lg:col-span-2">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
@@ -179,9 +174,7 @@ const Dashboard = () => {
             </Card>
           </div>
 
-          {/* Sidebar Content */}
           <div className="space-y-6">
-            {/* Upcoming Events */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -214,7 +207,6 @@ const Dashboard = () => {
               </CardContent>
             </Card>
 
-            {/* Quick Actions */}
             <Card>
               <CardHeader>
                 <CardTitle>Quick Actions</CardTitle>
@@ -230,14 +222,6 @@ const Dashboard = () => {
                 </Button>
                 <Button 
                   variant="outline" 
-                  className="w-full justify-start hover:bg-dicey-magenta hover:text-white"
-                  onClick={() => navigate('/job-opportunities')}
-                >
-                  <TrendingUp className="mr-2 h-4 w-4" />
-                  Browse Jobs
-                </Button>
-                <Button 
-                  variant="outline" 
                   className="w-full justify-start hover:bg-dicey-yellow hover:text-dicey-dark-pink"
                   onClick={() => navigate('/profile')}
                 >
@@ -247,7 +231,6 @@ const Dashboard = () => {
               </CardContent>
             </Card>
 
-            {/* Achievement */}
             <Card className="bg-dicey-yellow/10 border-dicey-yellow/20">
               <CardContent className="p-4 text-center">
                 <div className="text-dicey-magenta mb-2">
