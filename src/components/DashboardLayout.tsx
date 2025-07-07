@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -29,10 +28,8 @@ import {
   Bell,
   Home,
   FolderOpen,
-  Briefcase,
   FileText,
   Trophy,
-  Zap,
   Award
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -54,7 +51,6 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
     { title: 'Dashboard', url: '/dashboard', icon: Home },
     { title: 'Explore Projects', url: '/explore-projects', icon: Search },
     { title: 'My Portfolio', url: '/my-portfolio', icon: User },
-    { title: 'Job Opportunities', url: '/job-opportunities', icon: Briefcase },
     { title: 'My Applications', url: '/my-applications', icon: FileText },
   ];
 
@@ -182,7 +178,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
                       Profile
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={handleLogout} className="text-red-600">
+                    <DropdownMenuItem onClick={logout} className="text-red-600">
                       <LogOut className="mr-2 h-4 w-4" />
                       Sign out
                     </DropdownMenuItem>

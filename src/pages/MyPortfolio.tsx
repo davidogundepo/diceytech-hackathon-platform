@@ -324,8 +324,8 @@ const MyPortfolio = () => {
           
           <Card>
             <CardHeader>
-              <CardTitle>Technical Skills Radar</CardTitle>
-              <CardDescription>FIFA-style skill breakdown</CardDescription>
+              <CardTitle>Technical Skills Overview</CardTitle>
+              <CardDescription>Visual representation of skill proficiency levels</CardDescription>
             </CardHeader>
             <CardContent>
               <ChartContainer config={chartConfig} className="mx-auto aspect-square max-h-[400px]">
