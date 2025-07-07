@@ -1,4 +1,3 @@
-
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
 @tailwind base;
 @tailwind components;
@@ -32,10 +31,10 @@
     --chart-5: 27 87% 67%;
     --radius: 0.75rem;
     
-    /* DiceyTech brand colors */
+    /* DiceyTech brand colors - CORRECTED */
     --dicey-yellow: #F5C842;
-    --dicey-magenta: #E91E63;
-    --dicey-azure: #2196F3;
+    --dicey-magenta: #db4991;
+    --dicey-azure: #428b9f;
     --dicey-dark-pink: #C2185B;
   }
 
@@ -82,10 +81,10 @@
     background-color: #F5C842;
   }
   .bg-dicey-magenta {
-    background-color: #E91E63;
+    background-color: #db4991;
   }
   .bg-dicey-azure {
-    background-color: #2196F3;
+    background-color: #428b9f;
   }
   .bg-dicey-dark-pink {
     background-color: #C2185B;
@@ -94,10 +93,10 @@
     color: #F5C842;
   }
   .text-dicey-magenta {
-    color: #E91E63;
+    color: #db4991;
   }
   .text-dicey-azure {
-    color: #2196F3;
+    color: #428b9f;
   }
   .text-dicey-dark-pink {
     color: #C2185B;
@@ -106,18 +105,18 @@
     border-color: #F5C842;
   }
   .border-dicey-magenta {
-    border-color: #E91E63;
+    border-color: #db4991;
   }
   .border-dicey-azure {
-    border-color: #2196F3;
+    border-color: #428b9f;
   }
   .border-dicey-dark-pink {
     border-color: #C2185B;
   }
 }
 
-/* Seamless scrolling animation */
-@keyframes scroll-seamless {
+/* Dual scrolling animations - Up direction */
+@keyframes scroll-up {
   0% {
     transform: translateY(0);
   }
@@ -126,16 +125,36 @@
   }
 }
 
-.animate-scroll-seamless {
-  animation: scroll-seamless 20s linear infinite;
+/* Dual scrolling animations - Down direction */
+@keyframes scroll-down {
+  0% {
+    transform: translateY(-33.33%);
+  }
+  100% {
+    transform: translateY(0);
+  }
 }
 
-/* Pause animation on hover */
-.animate-scroll-seamless:hover {
+.animate-scroll-up {
+  animation: scroll-up 25s linear infinite;
+}
+
+.animate-scroll-down {
+  animation: scroll-down 30s linear infinite;
+}
+
+/* Pause animations on hover for better UX */
+.animate-scroll-up:hover,
+.animate-scroll-down:hover {
   animation-play-state: paused;
+}
+
+/* Enhanced shadow effects */
+.shadow-3xl {
+  box-shadow: 0 35px 60px -12px rgba(0, 0, 0, 0.25);
 }
 
 /* Smooth fade transitions for better visibility */
 .fade-overlay {
-  backdrop-filter: blur(2px);
+  backdrop-filter: blur(3px);
 }
