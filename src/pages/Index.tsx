@@ -112,9 +112,9 @@ const Index = () => {
 
       <div className="relative z-10 flex h-[calc(100vh-60px)]">
         {/* Left Side - Hero Content */}
-        <div className="flex-1 flex flex-col justify-center px-8 lg:px-12">
+        <div className="flex-1 flex flex-col justify-center px-6 lg:px-12">
           <div className="max-w-xl">
-            <div className="mb-4">
+            <div className="mb-6">
               <Badge className="bg-dicey-magenta text-white mb-3 text-xs px-3 py-1">
                 🚀 Africa's Premier Tech Platform
               </Badge>
@@ -174,26 +174,38 @@ const Index = () => {
           </div>
         </div>
 
-        {/* Center - Scrolling Winners Images */}
-        <div className="w-48 flex flex-col justify-center items-center relative">
+        {/* Center - Dual Scrolling Images */}
+        <div className="w-72 flex gap-3 justify-center items-center relative px-2">
           {/* Fade gradient overlays */}
-          <div className="absolute top-0 left-0 right-0 h-20 bg-gradient-to-b from-white via-white/80 to-transparent dark:from-gray-900 dark:via-gray-900/80 dark:to-transparent z-10 pointer-events-none"></div>
-          <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-white via-white/80 to-transparent dark:from-gray-900 dark:via-gray-900/80 dark:to-transparent z-10 pointer-events-none"></div>
-          
-          {/* Scrolling animation container */}
-          <div className="relative h-full w-full overflow-hidden">
-            <div className="flex flex-col space-y-6 animate-scroll-seamless py-10">
+          <div className="absolute top-0 left-0 right-0 h-16 bg-gradient-to-b from-white via-white/90 to-transparent dark:from-gray-900 dark:via-gray-900/90 dark:to-transparent z-10 pointer-events-none"></div>
+          <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-white via-white/90 to-transparent dark:from-gray-900 dark:via-gray-900/90 dark:to-transparent z-10 pointer-events-none"></div>
+
+          {/* Left Column - Scrolling Up */}
+          <div className="w-60 h-full overflow-hidden">
+            <div className="flex flex-col space-y-3 animate-scroll-up py-8">
               {[...winnerImages, ...winnerImages, ...winnerImages].map((image, index) => (
-                <div key={index} className="flex justify-center flex-shrink-0">
-                  <img 
-                    src={image} 
-                    alt={`DiceyTech Image ${(index % winnerImages.length) + 1}`}
-                    className="w-80 h-104 rounded-lg object-cover border-2 border-gray-300 dark:border-gray-600 shadow-lg transition-transform duration-300 hover:scale-105"
-                    onError={(e) => {
-                      console.log('Image failed to load:', image);
-                      e.currentTarget.style.display = 'none';
-                    }}
-                    onLoad={() => console.log('Image loaded successfully:', image)}
+                <div key={`up-${index}`} className="flex-shrink-0">
+                  <img
+                    src={image}
+                    alt={`DiceyTech Winner ${(index % winnerImages.length) + 1}`}
+                    className="w-60 h-32 rounded-lg object-cover border-3 border-white dark:border-gray-800 shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl hover:border-dicey-azure"
+                    style={{ filter: 'contrast(1.2) saturate(1.3) brightness(1.1)' }}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Right Column - Scrolling Down */}
+          <div className="w-60 h-full overflow-hidden">
+            <div className="flex flex-col space-y-3 animate-scroll-down py-8" style={{ marginTop: '-80px' }}>
+              {[...winnerImages.slice().reverse(), ...winnerImages.slice().reverse(), ...winnerImages.slice().reverse()].map((image, index) => (
+                <div key={`down-${index}`} className="flex-shrink-0">
+                  <img
+                    src={image}
+                    alt={`DiceyTech Achievement ${(index % winnerImages.length) + 1}`}
+                    className="w-60 h-32 rounded-lg object-cover border-3 border-white dark:border-gray-800 shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl hover:border-dicey-magenta"
+                    style={{ filter: 'contrast(1.2) saturate(1.3) brightness(1.1)' }}
                   />
                 </div>
               ))}
@@ -202,7 +214,7 @@ const Index = () => {
         </div>
 
         {/* Right Side - Login/Signup Form */}
-        <div className="w-80 flex flex-col justify-center px-6 bg-gray-50/80 dark:bg-gray-800/80 backdrop-blur-sm border-l border-gray-200/50 dark:border-gray-700/50">
+        <div className="w-96 flex flex-col justify-center px-6 bg-gray-50/80 dark:bg-gray-800/80 backdrop-blur-sm border-l border-gray-200/50 dark:border-gray-700/50">
           <Card className="w-full border-dicey-azure/30 shadow-xl bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm">
             <CardHeader className="text-center pb-4">
               <div className="w-12 h-12 bg-dicey-azure rounded-xl flex items-center justify-center mx-auto mb-3">
@@ -219,7 +231,7 @@ const Index = () => {
               <form onSubmit={handleSubmit} className="space-y-4">
                 {!isLogin && (
                   <>
-                    <div className="space-y-1">
+                    <div className="space-y-2">
                       <label htmlFor="fullName" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                         Full Name
                       </label>
@@ -230,11 +242,11 @@ const Index = () => {
                         value={fullName}
                         onChange={(e) => setFullName(e.target.value)}
                         required
-                        className="border-gray-300 focus:border-dicey-azure focus:ring-dicey-azure/20 h-10"
+                        className="border-gray-300 focus:border-dicey-azure focus:ring-dicey-azure/20 h-11 text-sm"
                       />
                     </div>
 
-                    <div className="space-y-1">
+                    <div className="space-y-2">
                       <label htmlFor="username" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                         Username
                       </label>
@@ -245,13 +257,13 @@ const Index = () => {
                         value={username}
                         onChange={(e) => setUsername(e.target.value)}
                         required
-                        className="border-gray-300 focus:border-dicey-azure focus:ring-dicey-azure/20 h-10"
+                        className="border-gray-300 focus:border-dicey-azure focus:ring-dicey-azure/20 h-11 text-sm"
                       />
                     </div>
                   </>
                 )}
 
-                <div className="space-y-1">
+                <div className="space-y-2">
                   <label htmlFor="email" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                     {isLogin ? 'Email or username' : 'Email'}
                   </label>
@@ -262,11 +274,11 @@ const Index = () => {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
-                    className="border-gray-300 focus:border-dicey-azure focus:ring-dicey-azure/20 h-10"
+                    className="border-gray-300 focus:border-dicey-azure focus:ring-dicey-azure/20 h-11 text-sm"
                   />
                 </div>
                 
-                <div className="space-y-1">
+                <div className="space-y-2">
                   <label htmlFor="password" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                     Password
                   </label>
@@ -278,7 +290,7 @@ const Index = () => {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required
-                      className="border-gray-300 focus:border-dicey-azure focus:ring-dicey-azure/20 pr-10 h-10"
+                      className="border-gray-300 focus:border-dicey-azure focus:ring-dicey-azure/20 pr-10 h-11 text-sm"
                     />
                     <Button
                       type="button"
@@ -309,7 +321,7 @@ const Index = () => {
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
                         required
-                        className="border-gray-300 focus:border-dicey-azure focus:ring-dicey-azure/20 pr-10 h-10"
+                        className="border-gray-300 focus:border-dicey-azure focus:ring-dicey-azure/20 pr-10 h-11 text-sm"
                       />
                       <Button
                         type="button"
@@ -330,7 +342,7 @@ const Index = () => {
 
                 <Button
                   type="submit"
-                  className="w-full bg-dicey-azure hover:bg-dicey-azure/90 text-white h-10 text-sm font-semibold shadow-lg"
+                  className="w-full bg-dicey-azure hover:bg-dicey-azure/90 text-white h-11 text-sm font-semibold shadow-lg"
                   disabled={isLoading}
                 >
                   {isLoading ? (isLogin ? "Signing in..." : "Creating account...") : (isLogin ? "Sign In" : "Create Account")}
