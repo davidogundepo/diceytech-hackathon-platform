@@ -1,0 +1,43 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isValidImageSize() {
+      return request.resource.size < 5 * 1024 * 1024; // 5MB max
+    }
+    
+    function isValidImageType() {
+      return request.resource.contentType.matches('image/.*');
+    }
+    
+    // User avatars
+    match /avatars/{userId}/{fileName} {
+      allow read: if true; // Public read
+      allow write: if isOwner(userId) && isValidImageSize() && isValidImageType();
+      allow delete: if isOwner(userId);
+    }
+    
+    // Project images
+    match /projects/{projectId}/{fileName} {
+      allow read: if true; // Public read
+      allow write: if isAuthenticated() && isValidImageSize() && isValidImageType();
+      allow delete: if isAuthenticated();
+    }
+    
+    // Hackathon images
+    match /hackathons/{hackathonId}/{fileName} {
+      allow read: if true; // Public read
+      allow write: if isAuthenticated() && isValidImageSize() && isValidImageType();
+      allow delete: if isAuthenticated();
+    }
+  }
+}
