@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,6 +19,8 @@ import {
   Trophy,
   Star
 } from "lucide-react";
+import { getAllProjects } from '@/services/firestoreService';
+import { Project } from '@/types/firestore';
 
 const ExploreProjects = () => {
   const navigate = useNavigate();
@@ -27,118 +28,32 @@ const ExploreProjects = () => {
   const [selectedProfile, setSelectedProfile] = useState('all');
   const [selectedDifficulty, setSelectedDifficulty] = useState('all');
   const [selectedOrganization, setSelectedOrganization] = useState('all');
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const projects = [
-    {
-      id: 1,
-      title: 'AgriConnect Summit Hackathon - Bridging the Generational Divide',
-      organization: 'DataFestAfrica',
-      description: 'Build solutions to connect traditional farming with modern agricultural technology. Focus on creating platforms that bridge the gap between experienced farmers and tech-savvy youth.',
-      startDate: 'May 02, 2025',
-      endDate: 'May 15, 2025',
-      difficulty: 'Hard',
-      prize: '$5000',
-      participants: 150,
-      maxParticipants: 200,
-      tags: ['Agriculture', 'Technology', 'Innovation'],
-      image: 'https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=400',
-      featured: true,
-      status: 'Active'
-    },
-    {
-      id: 2,
-      title: 'DataFestAfrica Hackathon 2024: Improving Academic Outcomes',
-      organization: 'DataFestAfrica',
-      description: 'Develop data-driven solutions to improve secondary education outcomes across Africa. Use analytics and machine learning to identify key factors affecting student performance.',
-      startDate: 'Oct 05, 2024',
-      endDate: 'Oct 10, 2024',
-      difficulty: 'Intermediate',
-      prize: '$3000',
-      participants: 89,
-      maxParticipants: 100,
-      tags: ['Education', 'Data Science', 'Analytics'],
-      image: 'https://images.unsplash.com/photo-1551434678-e076c223a692?w=400',
-      featured: false,
-      status: 'Completed'
-    },
-    {
-      id: 3,
-      title: 'Hack The Feed: Insights From Social Media Data',
-      organization: 'Playhouse Communication Ltd',
-      description: 'Extract meaningful insights from social media data to understand consumer behavior and trends. Build tools for sentiment analysis and trend prediction.',
-      startDate: 'Oct 08, 2023',
-      endDate: 'Oct 15, 2023',
-      difficulty: 'Hard',
-      prize: '$2500',
-      participants: 45,
-      maxParticipants: 60,
-      tags: ['Social Media', 'Data Analysis', 'Machine Learning'],
-      image: 'https://images.unsplash.com/photo-1611605698335-8b1569810432?w=400',
-      featured: false,
-      status: 'Completed'
-    },
-    {
-      id: 4,
-      title: 'Predicting Student Responses',
-      organization: 'Target Tuition',
-      description: 'Create predictive models to understand and forecast student learning patterns and responses to different teaching methodologies.',
-      startDate: 'Sep 03, 2023',
-      endDate: 'Sep 15, 2023',
-      difficulty: 'Intermediate',
-      prize: '$1500',
-      participants: 67,
-      maxParticipants: 80,
-      tags: ['Education', 'Prediction', 'AI'],
-      image: 'https://images.unsplash.com/photo-1509062522246-3755977927d7?w=400',
-      featured: false,
-      status: 'Completed'
-    },
-    {
-      id: 5,
-      title: 'Data-Driven Insights for Cardinal Stone\'s New Product Launch',
-      organization: 'Cardinal Stone',
-      description: 'Analyze market data and consumer behavior to provide actionable insights for a new financial product launch in the African market.',
-      startDate: 'Jun 28, 2023',
-      endDate: 'Jul 05, 2023',
-      difficulty: 'Hard',
-      prize: '$4000',
-      participants: 34,
-      maxParticipants: 50,
-      tags: ['Finance', 'Market Analysis', 'Product Launch'],
-      image: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=400',
-      featured: false,
-      status: 'Completed'
-    },
-    {
-      id: 6,
-      title: 'Creating a Master Property List for London',
-      organization: 'Mappa',
-      description: 'Build a comprehensive database and visualization tool for London properties, including market trends, pricing analysis, and neighborhood insights.',
-      startDate: 'Jun 28, 2023',
-      endDate: 'Jul 10, 2023',
-      difficulty: 'Intermediate',
-      prize: '$2000',
-      participants: 28,
-      maxParticipants: 40,
-      tags: ['Real Estate', 'Data Engineering', 'Visualization'],
-      image: 'https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?w=400',
-      featured: false,
-      status: 'Completed'
-    }
-  ];
+  useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        const allProjects = await getAllProjects();
+        setProjects(allProjects);
+      } catch (error) {
+        console.error('Error fetching projects:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const filteredProjects = projects.filter(project => {
-    const matchesSearch = project.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         project.organization.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         project.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
+    fetchProjects();
+  }, []);
+
+  const filteredProjects = projects.filter((project) => {
+    const matchesSearch = project.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          project.description?.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesDifficulty = selectedDifficulty === 'all' || project.difficulty.toLowerCase() === selectedDifficulty;
-    const matchesOrganization = selectedOrganization === 'all' || project.organization === selectedOrganization;
+    const matchesDifficulty = selectedDifficulty === 'all' || project.difficulty === selectedDifficulty;
     
-    return matchesSearch && matchesDifficulty && matchesOrganization;
+    return matchesSearch && matchesDifficulty;
   });
-
-  const organizations = [...new Set(projects.map(p => p.organization))];
 
   return (
     <DashboardLayout>
@@ -146,8 +61,8 @@ const ExploreProjects = () => {
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Hackathons & Practice Projects</h1>
-            <p className="text-gray-600 mt-1">Discover exciting challenges and build your portfolio</p>
+            <h1 className="text-3xl font-bold text-gray-900">Explore Projects</h1>
+            <p className="text-gray-600 mt-1">Discover amazing projects from the community</p>
           </div>
           <div className="flex gap-2">
             <Button variant="outline">
@@ -156,7 +71,7 @@ const ExploreProjects = () => {
             </Button>
             <Button onClick={() => navigate('/add-project')} className="bg-dicey-purple hover:bg-dicey-purple/90">
               <Trophy className="mr-2 h-4 w-4" />
-              Host Challenge
+              Add Project
             </Button>
           </div>
         </div>
@@ -180,10 +95,11 @@ const ExploreProjects = () => {
                   <SelectValue placeholder="All Profiles" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Profiles</SelectItem>
-                  <SelectItem value="hackathon">Hackathons</SelectItem>
-                  <SelectItem value="practice">Practice Projects</SelectItem>
-                  <SelectItem value="competition">Competitions</SelectItem>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  <SelectItem value="Web Development">Web Development</SelectItem>
+                  <SelectItem value="Mobile App">Mobile App</SelectItem>
+                  <SelectItem value="Data Science">Data Science</SelectItem>
+                  <SelectItem value="AI/ML">AI/ML</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -193,67 +109,54 @@ const ExploreProjects = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Levels</SelectItem>
-                  <SelectItem value="beginner">Beginner</SelectItem>
-                  <SelectItem value="intermediate">Intermediate</SelectItem>
-                  <SelectItem value="hard">Hard</SelectItem>
+                  <SelectItem value="Beginner">Beginner</SelectItem>
+                  <SelectItem value="Intermediate">Intermediate</SelectItem>
+                  <SelectItem value="Advanced">Advanced</SelectItem>
                 </SelectContent>
               </Select>
 
-              <Select value={selectedOrganization} onValueChange={setSelectedOrganization}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Organization" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Organizations</SelectItem>
-                  {organizations.map(org => (
-                    <SelectItem key={org} value={org}>{org}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Button variant="outline" className="w-full">
+                <Filter className="mr-2 h-4 w-4" />
+                More Filters
+              </Button>
             </div>
           </CardContent>
         </Card>
 
         {/* Projects Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredProjects.map((project) => (
+          {loading ? (
+            <p className="text-gray-500 col-span-3 text-center">Loading projects...</p>
+          ) : filteredProjects.length === 0 ? (
+            <p className="text-gray-500 col-span-3 text-center">No projects found</p>
+          ) : filteredProjects.map((project) => (
             <Card 
               key={project.id} 
-              className={`cursor-pointer transition-all hover:shadow-lg hover:-translate-y-1 ${
-                project.featured ? 'ring-2 ring-dicey-yellow ring-opacity-50' : ''
-              }`}
+              className="cursor-pointer transition-all hover:shadow-lg hover:-translate-y-1"
               onClick={() => navigate(`/project/${project.id}`)}
             >
               <div className="relative">
                 <img 
-                  src={project.image} 
+                  src={project.imageUrl || 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=300'} 
                   alt={project.title}
                   className="w-full h-48 object-cover rounded-t-lg"
                 />
-                {project.featured && (
-                  <Badge className="absolute top-3 left-3 bg-dicey-yellow text-black">
-                    <Star className="mr-1 h-3 w-3" />
-                    Featured
-                  </Badge>
-                )}
-                <Badge 
-                  className={`absolute top-3 right-3 ${
-                    project.status === 'Active' 
-                      ? 'bg-green-500' 
-                      : 'bg-gray-500'
-                  }`}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute bottom-3 right-3 bg-white/90 hover:bg-white"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                  }}
                 >
-                  {project.status}
-                </Badge>
+                  <Heart className="h-4 w-4" />
+                </Button>
               </div>
               
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between gap-2">
                   <CardTitle className="text-lg leading-tight">{project.title}</CardTitle>
                 </div>
-                <CardDescription className="text-sm text-dicey-teal font-medium">
-                  {project.organization}
-                </CardDescription>
               </CardHeader>
               
               <CardContent className="pt-0">
@@ -262,43 +165,22 @@ const ExploreProjects = () => {
                 </p>
                 
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-1 text-gray-500">
-                      <Calendar className="h-4 w-4" />
-                      <span>{project.endDate}</span>
-                    </div>
-                    <div className="flex items-center gap-1 text-gray-500">
-                      <Users className="h-4 w-4" />
-                      <span>{project.participants}/{project.maxParticipants}</span>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Badge variant={
-                        project.difficulty === 'Hard' ? 'destructive' : 
-                        project.difficulty === 'Intermediate' ? 'default' : 'secondary'
-                      }>
-                        {project.difficulty}
-                      </Badge>
-                      <div className="flex items-center gap-1 text-dicey-yellow font-semibold">
-                        <Award className="h-4 w-4" />
-                        <span>{project.prize}</span>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="flex flex-wrap gap-1">
-                    {project.tags.slice(0, 3).map((tag, index) => (
+                  <div className="flex flex-wrap gap-1 mb-3">
+                    {(project.techStack || []).slice(0, 4).map((tag: string, index: number) => (
                       <Badge key={index} variant="outline" className="text-xs">
                         {tag}
                       </Badge>
                     ))}
-                    {project.tags.length > 3 && (
-                      <Badge variant="outline" className="text-xs">
-                        +{project.tags.length - 3}
-                      </Badge>
-                    )}
+                  </div>
+                  
+                  <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-1 text-gray-500">
+                      <Calendar className="h-4 w-4" />
+                      <span>{new Date(project.createdAt.seconds * 1000).toLocaleDateString()}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {project.difficulty && <Badge variant="secondary">{project.difficulty}</Badge>}
+                    </div>
                   </div>
                 </div>
               </CardContent>
@@ -316,7 +198,7 @@ const ExploreProjects = () => {
         )}
 
         {/* No Results */}
-        {filteredProjects.length === 0 && (
+        {filteredProjects.length === 0 && !loading && (
           <Card className="text-center py-12">
             <CardContent>
               <Search className="h-12 w-12 text-gray-300 mx-auto mb-4" />

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,56 +16,46 @@ import {
   Plus
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { getUserProjects, getRecentHackathons } from '@/services/firestoreService';
+import { Project, Hackathon } from '@/types/firestore';
 
 const Dashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [hackathons, setHackathons] = useState<Hackathon[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+      
+      try {
+        const [userProjects, upcomingHackathons] = await Promise.all([
+          getUserProjects(user.id, 3),
+          getRecentHackathons(5)
+        ]);
+        
+        setProjects(userProjects);
+        setHackathons(upcomingHackathons);
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [user]);
 
   const stats = [
-    { title: 'Active Projects', value: '12', icon: Trophy, color: 'text-dicey-azure' },
-    { title: 'Hackathons Joined', value: '8', icon: Users, color: 'text-dicey-magenta' },
-    { title: 'Applications', value: '15', icon: Calendar, color: 'text-dicey-yellow' },
-    { title: 'Profile Views', value: '247', icon: Target, color: 'text-green-600' },
-  ];
-
-  const recentProjects = [
-    {
-      id: 1,
-      title: 'AgriConnect Summit Hackathon',
-      organization: 'DataFestAfrica',
-      status: 'Active',
-      endDate: 'May 15, 2025',
-      difficulty: 'Hard',
-      prize: '$5000',
-      image: 'https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=300'
-    },
-    {
-      id: 2,
-      title: 'DataFestAfrica Hackathon 2024',
-      organization: 'DataFestAfrica',
-      status: 'Submitted',
-      endDate: 'Oct 10, 2024',
-      difficulty: 'Intermediate',
-      prize: '$3000',
-      image: 'https://images.unsplash.com/photo-1551434678-e076c223a692?w=300'
-    }
-  ];
-
-  const upcomingEvents = [
-    {
-      title: 'AI for Agriculture Workshop',
-      date: 'Jan 15, 2025',
-      time: '2:00 PM',
-      location: 'Online',
-      type: 'Workshop'
-    },
-    {
-      title: 'Tech Career Fair',
-      date: 'Jan 20, 2025',
-      time: '10:00 AM',
-      location: 'Lagos, Nigeria',
-      type: 'Event'
-    }
+    { title: 'Active Projects', value: projects.length.toString(), icon: Trophy, color: 'text-dicey-azure' },
+    { title: 'Hackathons Joined', value: hackathons.length.toString(), icon: Users, color: 'text-dicey-magenta' },
+    { title: 'Applications', value: '0', icon: Calendar, color: 'text-dicey-yellow' },
+    { title: 'Profile Views', value: '0', icon: Target, color: 'text-green-600' },
   ];
 
   return (
@@ -122,7 +112,7 @@ const Dashboard = () => {
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
                   <CardTitle>Recent Projects</CardTitle>
-                  <CardDescription>Your latest hackathons and competitions</CardDescription>
+                  <CardDescription>Your latest projects and submissions</CardDescription>
                 </div>
                 <Button 
                   variant="outline" 
@@ -133,31 +123,33 @@ const Dashboard = () => {
                 </Button>
               </CardHeader>
               <CardContent className="space-y-4">
-                {recentProjects.map((project) => (
+              {loading ? (
+                <p className="text-gray-500">Loading projects...</p>
+              ) : projects.length === 0 ? (
+                <p className="text-gray-500">No projects yet. Add your first project!</p>
+              ) : projects.map((project) => (
                   <div key={project.id} className="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer"
                        onClick={() => navigate(`/project/${project.id}`)}>
                     <img 
-                      src={project.image} 
+                      src={project.imageUrl || 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=300'} 
                       alt={project.title}
                       className="w-16 h-16 rounded-lg object-cover"
                     />
                     <div className="flex-1">
                       <h4 className="font-semibold text-gray-900 dark:text-white">{project.title}</h4>
-                      <p className="text-sm text-gray-600 dark:text-gray-300">{project.organization}</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-1">{project.description}</p>
                       <div className="flex items-center gap-2 mt-2">
-                        <Badge variant={project.status === 'Active' ? 'default' : 'secondary'} className="bg-dicey-magenta text-white">
-                          {project.status}
-                        </Badge>
-                        <Badge variant="outline">{project.difficulty}</Badge>
-                        <span className="text-sm text-gray-500 flex items-center gap-1">
-                          <Award className="h-3 w-3" />
-                          {project.prize}
-                        </span>
+                        {project.status && (
+                          <Badge variant={project.status === 'published' ? 'default' : 'secondary'} className="bg-dicey-magenta text-white">
+                            {project.status}
+                          </Badge>
+                        )}
+                        {project.difficulty && <Badge variant="outline">{project.difficulty}</Badge>}
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm text-gray-500">Ends</p>
-                      <p className="text-sm font-medium">{project.endDate}</p>
+                      <p className="text-sm text-gray-500">Created</p>
+                      <p className="text-sm font-medium">{new Date(project.createdAt.seconds * 1000).toLocaleDateString()}</p>
                     </div>
                   </div>
                 ))}
@@ -165,10 +157,10 @@ const Dashboard = () => {
                 <Button 
                   variant="ghost" 
                   className="w-full border-2 border-dashed border-gray-300 h-20 hover:border-dicey-azure hover:bg-dicey-azure/10"
-                  onClick={() => navigate('/explore-projects')}
+                  onClick={() => navigate('/add-project')}
                 >
                   <Plus className="mr-2 h-5 w-5" />
-                  Discover New Projects
+                  Add New Project
                 </Button>
               </CardContent>
             </Card>
@@ -179,30 +171,35 @@ const Dashboard = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Calendar className="h-5 w-5" />
-                  Upcoming Events
+                  Upcoming Hackathons
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {upcomingEvents.map((event, index) => (
+                {loading ? (
+                  <p className="text-gray-500">Loading events...</p>
+                ) : hackathons.length === 0 ? (
+                  <p className="text-gray-500">No upcoming hackathons.</p>
+                ) : hackathons.map((event, index) => (
                   <div key={index} className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                     <div className="flex items-start justify-between mb-2">
                       <h5 className="font-medium text-sm">{event.title}</h5>
-                      <Badge variant="outline" className="text-xs">{event.type}</Badge>
+                      <Badge variant="outline" className="text-xs">{event.category}</Badge>
                     </div>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mb-2 line-clamp-2">{event.description}</p>
                     <div className="space-y-1 text-xs text-gray-600 dark:text-gray-400">
                       <div className="flex items-center gap-1">
                         <Clock className="h-3 w-3" />
-                        {event.date} at {event.time}
+                        {new Date(event.startDate.seconds * 1000).toLocaleDateString()}
                       </div>
                       <div className="flex items-center gap-1">
-                        <MapPin className="h-3 w-3" />
-                        {event.location}
+                        <Users className="h-3 w-3" />
+                        {event.participantCount || 0} participants
                       </div>
                     </div>
                   </div>
                 ))}
                 <Button variant="ghost" size="sm" className="w-full" onClick={() => navigate('/hackathons')}>
-                  View All Events
+                  View All Hackathons
                 </Button>
               </CardContent>
             </Card>
@@ -236,9 +233,9 @@ const Dashboard = () => {
                 <div className="text-dicey-magenta mb-2">
                   <Trophy className="h-8 w-8 mx-auto" />
                 </div>
-                <h4 className="font-semibold text-gray-900 dark:text-white mb-1">Rising Star!</h4>
+                <h4 className="font-semibold text-gray-900 dark:text-white mb-1">Keep Going!</h4>
                 <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
-                  You're in the top 10% of active participants this month.
+                  Continue building your portfolio and joining hackathons.
                 </p>
                 <Button 
                   size="sm" 
