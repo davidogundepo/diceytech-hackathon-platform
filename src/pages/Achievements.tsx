@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,137 +18,84 @@ import {
   Heart,
   TrendingUp
 } from "lucide-react";
+import { useAuth } from '@/contexts/AuthContext';
+import { getAllAchievements, getUserAchievements } from '@/services/firestoreService';
+import { Achievement, UserAchievement } from '@/types/firestore';
 
 const Achievements = () => {
-  const achievements = [
-    {
-      id: 1,
-      title: 'Rising Star',
-      description: 'Be in the top 10% of active users this month',
-      icon: Star,
-      color: 'text-dicey-yellow',
-      bgColor: 'bg-dicey-yellow/10',
-      earned: true,
-      earnedDate: '2024-11-15',
-      points: 100,
-      rarity: 'Rare'
-    },
-    {
-      id: 2,
-      title: 'First Project',
-      description: 'Complete your first project on DiceyTech',
-      icon: Trophy,
-      color: 'text-dicey-azure',
-      bgColor: 'bg-dicey-azure/10',
-      earned: true,
-      earnedDate: '2024-10-20',
-      points: 50,
-      rarity: 'Common'
-    },
-    {
-      id: 3,
-      title: 'Hackathon Hero',
-      description: 'Participate in 5 hackathons',
-      icon: Crown,
-      color: 'text-dicey-magenta',
-      bgColor: 'bg-dicey-magenta/10',
-      earned: true,
-      earnedDate: '2024-11-10',
-      points: 200,
-      rarity: 'Epic'
-    },
-    {
-      id: 4,
-      title: 'Code Warrior',
-      description: 'Submit 10 projects to your portfolio',
-      icon: Code,
-      color: 'text-dicey-azure',
-      bgColor: 'bg-dicey-azure/10',
-      earned: false,
-      progress: 6,
-      maxProgress: 10,
-      points: 150,
-      rarity: 'Rare'
-    },
-    {
-      id: 5,
-      title: 'Network Builder',
-      description: 'Connect with 50 other developers',
-      icon: Users,
-      color: 'text-dicey-magenta',
-      bgColor: 'bg-dicey-magenta/10',
-      earned: false,
-      progress: 23,
-      maxProgress: 50,
-      points: 100,
-      rarity: 'Uncommon'
-    },
-    {
-      id: 6,
-      title: 'Streak Master',
-      description: 'Maintain a 30-day activity streak',
-      icon: Zap,
-      color: 'text-dicey-yellow',
-      bgColor: 'bg-dicey-yellow/10',
-      earned: false,
-      progress: 18,
-      maxProgress: 30,
-      points: 120,
-      rarity: 'Rare'
-    },
-    {
-      id: 7,
-      title: 'Job Hunter',
-      description: 'Apply to 25 job opportunities',
-      icon: Target,
-      color: 'text-dicey-azure',
-      bgColor: 'bg-dicey-azure/10',
-      earned: false,
-      progress: 15,
-      maxProgress: 25,
-      points: 80,
-      rarity: 'Common'
-    },
-    {
-      id: 8,
-      title: 'Community Favorite',
-      description: 'Receive 100 likes on your projects',
-      icon: Heart,
-      color: 'text-dicey-magenta',
-      bgColor: 'bg-dicey-magenta/10',
-      earned: false,
-      progress: 47,
-      maxProgress: 100,
-      points: 150,
-      rarity: 'Rare'
-    }
-  ];
+  const { user } = useAuth();
+  const [achievements, setAchievements] = useState<Achievement[]>([]);
+  const [userAchievements, setUserAchievements] = useState<UserAchievement[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchAchievements = async () => {
+      if (!user) return;
+      
+      setLoading(true);
+      try {
+        const [allAchievements, userAchs] = await Promise.all([
+          getAllAchievements(),
+          getUserAchievements(user.id)
+        ]);
+        setAchievements(allAchievements);
+        setUserAchievements(userAchs);
+      } catch (error) {
+        console.error('Error fetching achievements:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAchievements();
+  }, [user]);
+
+  const getIconComponent = (iconName: string) => {
+    const icons: Record<string, any> = {
+      Trophy, Star, Award, Target, Zap, Crown, Medal, Users, Code, Heart
+    };
+    return icons[iconName] || Trophy;
+  };
+
+  const earnedAchievements = userAchievements.filter(ua => ua.progress >= 100);
+  const totalPoints = earnedAchievements.reduce((sum, ua) => {
+    const ach = achievements.find(a => a.id === ua.achievementId);
+    return sum + (ach?.points || 0);
+  }, 0);
 
   const stats = {
-    totalPoints: achievements.filter(a => a.earned).reduce((sum, a) => sum + a.points, 0),
-    totalEarned: achievements.filter(a => a.earned).length,
+    totalPoints,
+    totalEarned: earnedAchievements.length,
     totalAchievements: achievements.length,
-    rank: 'Gold',
-    nextRank: 'Platinum',
-    pointsToNextRank: 200
+    rank: totalPoints > 500 ? 'Platinum' : totalPoints > 300 ? 'Gold' : totalPoints > 150 ? 'Silver' : 'Bronze',
+    nextRank: totalPoints > 500 ? 'Diamond' : totalPoints > 300 ? 'Platinum' : totalPoints > 150 ? 'Gold' : 'Silver',
+    pointsToNextRank: totalPoints > 500 ? 1000 - totalPoints : totalPoints > 300 ? 500 - totalPoints : totalPoints > 150 ? 300 - totalPoints : 150 - totalPoints
   };
 
   const getRarityColor = (rarity: string) => {
     switch (rarity) {
-      case 'Common':
+      case 'common':
         return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200';
-      case 'Uncommon':
-        return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
-      case 'Rare':
+      case 'rare':
         return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300';
-      case 'Epic':
+      case 'epic':
         return 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300';
-      case 'Legendary':
+      case 'legendary':
         return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300';
       default:
         return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200';
     }
   };
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-gray-500 dark:text-gray-400">Loading achievements...</div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -162,16 +108,6 @@ const Achievements = () => {
               Achievements
             </h1>
             <p className="text-gray-600 dark:text-gray-300 mt-1">Track your progress and unlock rewards</p>
-          </div>
-          <div className="flex gap-2">
-            <Button variant="outline" className="border-dicey-azure text-dicey-azure hover:bg-dicey-azure hover:text-white">
-              <TrendingUp className="mr-2 h-4 w-4" />
-              Leaderboard
-            </Button>
-            <Button className="bg-dicey-azure hover:bg-dicey-azure/90 text-white">
-              <Star className="mr-2 h-4 w-4" />
-              Share Progress
-            </Button>
           </div>
         </div>
 
@@ -205,7 +141,7 @@ const Achievements = () => {
             <CardContent className="p-6 text-center">
               <Medal className="h-12 w-12 mx-auto mb-4 text-dicey-azure" />
               <div className="text-3xl font-bold mb-2 text-gray-900 dark:text-white">
-                {Math.round(((stats.totalPoints % 1000) / 1000) * 100)}%
+                {Math.round((stats.totalPoints % 1000) / 10)}%
               </div>
               <div className="text-sm text-gray-600 dark:text-gray-300">To {stats.nextRank}</div>
             </CardContent>
@@ -230,102 +166,94 @@ const Achievements = () => {
 
         {/* Achievements Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {achievements.map((achievement) => (
-            <Card 
-              key={achievement.id} 
-              className={`transition-all hover:shadow-lg border-2 ${
-                achievement.earned 
-                  ? 'border-dicey-azure bg-dicey-azure/5 dark:bg-dicey-azure/10' 
-                  : 'border-gray-200 dark:border-gray-700'
-              }`}
-            >
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between mb-4">
-                  <div className={`p-3 rounded-full ${achievement.bgColor}`}>
-                    <achievement.icon className={`h-8 w-8 ${achievement.color}`} />
-                  </div>
-                  <div className="flex flex-col items-end gap-2">
-                    <Badge className={getRarityColor(achievement.rarity)}>
-                      {achievement.rarity}
-                    </Badge>
-                    {achievement.earned && (
-                      <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
-                        ✓ Earned
+          {achievements.map((achievement) => {
+            const userAch = userAchievements.find(ua => ua.achievementId === achievement.id);
+            const IconComponent = getIconComponent(achievement.icon);
+            const isEarned = userAch && userAch.progress >= 100;
+
+            return (
+              <Card 
+                key={achievement.id} 
+                className={`transition-all hover:shadow-lg border-2 ${
+                  isEarned
+                    ? 'border-dicey-azure bg-dicey-azure/5 dark:bg-dicey-azure/10' 
+                    : 'border-gray-200 dark:border-gray-700'
+                }`}
+              >
+                <CardContent className="p-6">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="p-3 rounded-full bg-dicey-azure/10">
+                      <IconComponent className="h-8 w-8 text-dicey-azure" />
+                    </div>
+                    <div className="flex flex-col items-end gap-2">
+                      <Badge className={getRarityColor(achievement.rarity)}>
+                        {achievement.rarity}
                       </Badge>
-                    )}
-                  </div>
-                </div>
-                
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                  {achievement.title}
-                </h3>
-                <p className="text-gray-600 dark:text-gray-300 text-sm mb-4">
-                  {achievement.description}
-                </p>
-                
-                {achievement.earned ? (
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-                      <span className="text-sm text-gray-500 dark:text-gray-400">
-                        {new Date(achievement.earnedDate).toLocaleDateString()}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Star className="h-4 w-4 text-dicey-yellow" />
-                      <span className="text-sm font-medium text-gray-900 dark:text-white">{achievement.points} pts</span>
+                      {isEarned && (
+                        <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
+                          ✓ Earned
+                        </Badge>
+                      )}
                     </div>
                   </div>
-                ) : (
-                  <div className="space-y-2">
+                  
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                    {achievement.title}
+                  </h3>
+                  <p className="text-gray-600 dark:text-gray-300 text-sm mb-4">
+                    {achievement.description}
+                  </p>
+                  
+                  {isEarned ? (
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600 dark:text-gray-300">
-                        Progress: {achievement.progress}/{achievement.maxProgress}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                        <span className="text-sm text-gray-500 dark:text-gray-400">
+                          {userAch?.earnedAt.toDate().toLocaleDateString()}
+                        </span>
+                      </div>
                       <div className="flex items-center gap-1">
-                        <Star className="h-4 w-4 text-gray-400" />
-                        <span className="text-sm text-gray-500 dark:text-gray-400">{achievement.points} pts</span>
+                        <Star className="h-4 w-4 text-dicey-yellow" />
+                        <span className="text-sm font-medium text-gray-900 dark:text-white">{achievement.points} pts</span>
                       </div>
                     </div>
-                    <Progress 
-                      value={(achievement.progress! / achievement.maxProgress!) * 100} 
-                      className="h-2"
-                    />
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ))}
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600 dark:text-gray-300">
+                          Progress: {userAch?.progress || 0}/100
+                        </span>
+                        <div className="flex items-center gap-1">
+                          <Star className="h-4 w-4 text-gray-400" />
+                          <span className="text-sm text-gray-500 dark:text-gray-400">{achievement.points} pts</span>
+                        </div>
+                      </div>
+                      <Progress 
+                        value={userAch?.progress || 0} 
+                        className="h-2"
+                      />
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
 
-        {/* Recent Activity */}
-        <Card className="border-dicey-azure">
-          <CardHeader>
-            <CardTitle className="text-gray-900 dark:text-white">Recent Achievement Activity</CardTitle>
-            <CardDescription className="text-gray-600 dark:text-gray-300">Your latest accomplishments</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {achievements.filter(a => a.earned).slice(0, 3).map((achievement) => (
-                <div key={achievement.id} className="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-                  <div className={`p-2 rounded-full ${achievement.bgColor}`}>
-                    <achievement.icon className={`h-6 w-6 ${achievement.color}`} />
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="font-medium text-gray-900 dark:text-white">{achievement.title}</h4>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Earned on {new Date(achievement.earnedDate).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Star className="h-4 w-4 text-dicey-yellow" />
-                    <span className="text-sm font-medium text-gray-900 dark:text-white">+{achievement.points}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        {/* Empty State */}
+        {achievements.length === 0 && (
+          <Card className="text-center py-12">
+            <CardContent>
+              <Trophy className="h-12 w-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                No achievements yet
+              </h3>
+              <p className="text-gray-600 dark:text-gray-300">
+                Start participating in hackathons and building projects to earn achievements!
+              </p>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </DashboardLayout>
   );

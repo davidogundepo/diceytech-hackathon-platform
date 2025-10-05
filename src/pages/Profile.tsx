@@ -28,44 +28,44 @@ import { toast } from "@/hooks/use-toast";
 const Profile = () => {
   const { user } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [profileData, setProfileData] = useState({
-    name: user?.name || '',
+    name: user?.displayName || '',
     email: user?.email || '',
-    username: user?.username || '',
-    bio: 'Passionate data analyst and software developer with a focus on creating innovative solutions for real-world problems. Experienced in machine learning, web development, and data visualization.',
-    location: 'Lagos, Nigeria',
-    phone: '+234 801 234 5678',
-    website: 'https://david-portfolio.com',
-    github: 'https://github.com/davidogundepo',
-    linkedin: 'https://linkedin.com/in/davidogundepo',
-    twitter: 'https://twitter.com/davidogundepo',
-    skills: ['Python', 'Data Analysis', 'Machine Learning', 'React', 'Django', 'SQL', 'AWS', 'Tableau'],
+    bio: user?.bio || '',
+    location: user?.location || '',
+    phone: user?.phone || '',
+    website: user?.website || '',
+    github: user?.github || '',
+    linkedin: user?.linkedin || '',
+    twitter: user?.twitter || '',
+    skills: user?.skills || [],
     goal: 'Be on top of the world',
-    experience: [
-      {
-        title: 'Data Analyst',
-        company: 'Tech Solutions Ltd',
-        period: '2023 - Present',
-        description: 'Analyze large datasets to drive business insights and improve decision-making processes.'
-      },
-      {
-        title: 'Junior Developer',
-        company: 'StartupXYZ',
-        period: '2022 - 2023',
-        description: 'Developed web applications using React and Node.js for various client projects.'
-      }
-    ],
-    education: [
-      {
-        degree: 'Bachelor of Science in Computer Science',
-        school: 'University of Lagos',
-        period: '2018 - 2022',
-        description: 'Graduated with First Class Honors. Focused on software engineering and data structures.'
-      }
-    ]
+    experience: [] as any[],
+    education: [] as any[]
   });
 
   const [newSkill, setNewSkill] = useState('');
+
+  React.useEffect(() => {
+    if (user) {
+      setProfileData({
+        name: user.displayName || '',
+        email: user.email,
+        bio: user.bio || '',
+        location: user.location || '',
+        phone: user.phone || '',
+        website: user.website || '',
+        github: user.github || '',
+        linkedin: user.linkedin || '',
+        twitter: user.twitter || '',
+        skills: user.skills || [],
+        goal: 'Be on top of the world',
+        experience: [],
+        education: []
+      });
+    }
+  }, [user]);
 
   const handleInputChange = (field: string, value: string) => {
     setProfileData(prev => ({ ...prev, [field]: value }));
@@ -88,12 +88,38 @@ const Profile = () => {
     }));
   };
 
-  const handleSave = () => {
-    toast({
-      title: "Profile updated",
-      description: "Your profile has been successfully updated.",
-    });
-    setIsEditing(false);
+  const handleSave = async () => {
+    if (!user) return;
+    
+    setLoading(true);
+    try {
+      const { updateUser } = await import('@/services/firestoreService');
+      await updateUser(user.id, {
+        displayName: profileData.name,
+        bio: profileData.bio,
+        location: profileData.location,
+        phone: profileData.phone,
+        website: profileData.website,
+        github: profileData.github,
+        linkedin: profileData.linkedin,
+        twitter: profileData.twitter,
+        skills: profileData.skills
+      });
+      
+      toast({
+        title: "Profile updated",
+        description: "Your profile has been successfully updated.",
+      });
+      setIsEditing(false);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update profile. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const profileCompleteness = () => {
@@ -121,11 +147,11 @@ const Profile = () => {
           <div className="flex gap-2">
             {isEditing ? (
               <>
-                <Button variant="outline" onClick={() => setIsEditing(false)}>
+                <Button variant="outline" onClick={() => setIsEditing(false)} disabled={loading}>
                   Cancel
                 </Button>
-                <Button onClick={handleSave} className="bg-dicey-teal hover:bg-dicey-teal/90">
-                  Save Changes
+                <Button onClick={handleSave} className="bg-dicey-teal hover:bg-dicey-teal/90" disabled={loading}>
+                  {loading ? 'Saving...' : 'Save Changes'}
                 </Button>
               </>
             ) : (
@@ -167,9 +193,9 @@ const Profile = () => {
                 <div className="flex items-center gap-6">
                   <div className="relative">
                     <Avatar className="h-20 w-20">
-                      <AvatarImage src={user?.avatar} />
+                      <AvatarImage src={user?.photoURL || undefined} />
                       <AvatarFallback className="bg-dicey-teal text-white text-2xl">
-                        {profileData.name.split(' ').map(n => n[0]).join('')}
+                        {profileData.name.split(' ').map(n => n[0]).join('') || 'U'}
                       </AvatarFallback>
                     </Avatar>
                     {isEditing && (
@@ -183,8 +209,8 @@ const Profile = () => {
                     )}
                   </div>
                   <div className="flex-1">
-                    <h3 className="text-xl font-semibold">{profileData.name}</h3>
-                    <p className="text-dicey-teal">@{profileData.username}</p>
+                    <h3 className="text-xl font-semibold text-gray-900 dark:text-white">{profileData.name}</h3>
+                    <p className="text-dicey-teal">{user?.email}</p>
                     <Badge variant="outline" className="mt-2">{user?.role}</Badge>
                   </div>
                 </div>

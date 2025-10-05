@@ -141,7 +141,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
               <div className="flex items-center gap-4">
                 <SidebarTrigger />
                 <div className="text-sm text-gray-600 dark:text-gray-300">
-                  Welcome back, <span className="font-medium text-gray-900 dark:text-white">{user?.name}</span>
+                  Welcome back, <span className="font-medium text-gray-900 dark:text-white">{user?.displayName || user?.email}</span>
                 </div>
               </div>
 
@@ -159,9 +159,9 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="flex items-center gap-2 p-2 hover:bg-dicey-azure/20">
                       <Avatar className="h-8 w-8">
-                        <AvatarImage src={user?.avatar} />
+                        <AvatarImage src={user?.photoURL || undefined} />
                         <AvatarFallback className="bg-dicey-azure text-white">
-                          {user?.name?.split(' ').map(n => n[0]).join('')}
+                          {user?.displayName?.split(' ').map(n => n[0]).join('') || user?.email?.[0].toUpperCase() || 'U'}
                         </AvatarFallback>
                       </Avatar>
                       <ChevronDown className="h-4 w-4" />
@@ -169,8 +169,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56">
                     <div className="px-2 py-1.5">
-                      <p className="text-sm font-medium">{user?.name}</p>
-                      <p className="text-xs text-gray-500">@{user?.username}</p>
+                      <p className="text-sm font-medium">{user?.displayName || 'User'}</p>
+                      <p className="text-xs text-gray-500">{user?.email}</p>
                     </div>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={() => navigate('/profile')}>

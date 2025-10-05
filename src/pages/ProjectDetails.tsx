@@ -1,6 +1,6 @@
 
 import { useParams, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { ArrowLeft, Calendar, Users, Star, GitBranch, ExternalLink, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,9 +15,66 @@ const ProjectDetails = () => {
   const { toast } = useToast();
   const [isSaved, setIsSaved] = useState(false);
   const [hasJoined, setHasJoined] = useState(false);
+  const [project, setProject] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
-  // Mock project data - this would come from API
-  const project = {
+  React.useEffect(() => {
+    const fetchProject = async () => {
+      if (!id) return;
+      
+      setLoading(true);
+      try {
+        const { getProjectById } = await import('@/services/firestoreService');
+        const projectData = await getProjectById(id);
+        setProject(projectData);
+      } catch (error) {
+        console.error('Error fetching project:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load project details",
+          variant: "destructive"
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProject();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-gray-500 dark:text-gray-400">Loading project...</div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (!project) {
+    return (
+      <DashboardLayout>
+        <div className="max-w-6xl mx-auto p-6">
+          <Card className="text-center py-12">
+            <CardContent>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                Project not found
+              </h3>
+              <p className="text-gray-600 dark:text-gray-300 mb-4">
+                The project you're looking for doesn't exist or has been removed.
+              </p>
+              <Button onClick={() => navigate('/explore-projects')}>
+                Back to Projects
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  const mockProject = {
     id: id,
     title: "AI-Powered Healthcare Assistant",
     description: "A comprehensive healthcare management system that uses AI to assist doctors in diagnosis and treatment recommendations. The platform includes patient management, medical history tracking, and predictive analytics.",

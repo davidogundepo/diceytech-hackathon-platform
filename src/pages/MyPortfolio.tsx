@@ -30,12 +30,33 @@ import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Responsi
 const MyPortfolio = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [projects, setProjects] = React.useState<any[]>([]);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    const fetchProjects = async () => {
+      if (user) {
+        setLoading(true);
+        try {
+          const { getUserProjects } = await import('@/services/firestoreService');
+          const userProjects = await getUserProjects(user.id);
+          setProjects(userProjects);
+        } catch (error) {
+          console.error('Error fetching projects:', error);
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchProjects();
+  }, [user]);
 
   const portfolioStats = {
-    totalProjects: 8,
-    completedHackathons: 5,
-    totalAwards: 3,
-    profileViews: 247
+    totalProjects: projects.length,
+    completedHackathons: 5, // TODO: Fetch from applications
+    totalAwards: 3, // TODO: Fetch from achievements
+    profileViews: 247 // TODO: Add view tracking
   };
 
   const skillsData = [
@@ -47,43 +68,6 @@ const MyPortfolio = () => {
     { skill: 'Django', level: 70 },
     { skill: 'AWS', level: 68 },
     { skill: 'JavaScript', level: 82 }
-  ];
-
-  const projects = [
-    {
-      id: 1,
-      title: 'AgriConnect Mobile App',
-      description: 'A mobile application connecting farmers with modern agricultural technologies and market insights.',
-      image: 'https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=300',
-      tags: ['React Native', 'Node.js', 'MongoDB'],
-      status: 'Completed',
-      award: '1st Place - AgriConnect Hackathon',
-      github: 'https://github.com/username/agriconnect',
-      demo: 'https://agriconnect-demo.com',
-      date: 'May 2025'
-    },
-    {
-      id: 2,
-      title: 'Student Performance Predictor',
-      description: 'Machine learning model to predict student academic outcomes based on various factors.',
-      image: 'https://images.unsplash.com/photo-1509062522246-3755977927d7?w=300',
-      tags: ['Python', 'Scikit-learn', 'Pandas'],
-      status: 'Completed',
-      award: '2nd Place - DataFest Africa',
-      github: 'https://github.com/username/student-predictor',
-      demo: 'https://student-pred-demo.com',
-      date: 'Oct 2024'
-    },
-    {
-      id: 3,
-      title: 'Social Media Analytics Dashboard',
-      description: 'Real-time dashboard for analyzing social media trends and sentiment analysis.',
-      image: 'https://images.unsplash.com/photo-1611605698335-8b1569810432?w=300',
-      tags: ['React', 'D3.js', 'Python', 'Twitter API'],
-      status: 'In Progress',
-      github: 'https://github.com/username/social-analytics',
-      date: 'Jan 2025'
-    }
   ];
 
   const achievements = [
@@ -253,69 +237,104 @@ const MyPortfolio = () => {
             </Button>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {projects.map((project) => (
-              <Card key={project.id} className="transition-all hover:shadow-lg">
-                <div className="relative">
-                  <img 
-                    src={project.image} 
-                    alt={project.title}
-                    className="w-full h-48 object-cover rounded-t-lg"
-                  />
-                  <Badge 
-                    className={`absolute top-3 right-3 ${
-                      project.status === 'Completed' ? 'bg-green-500' : 'bg-blue-500'
-                    }`}
-                  >
-                    {project.status}
-                  </Badge>
-                </div>
+          {loading ? (
+            <div className="text-center py-8">Loading projects...</div>
+          ) : projects.length === 0 ? (
+            <Card className="col-span-full text-center py-12">
+              <CardContent>
+                <Code className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                  No projects yet
+                </h3>
+                <p className="text-gray-600 dark:text-gray-300 mb-4">
+                  Start building your portfolio by adding your first project!
+                </p>
+                <Button onClick={() => navigate('/add-project')} className="bg-dicey-azure hover:bg-dicey-azure/90">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Your First Project
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {projects.map((project) => (
+                <Card key={project.id} className="transition-all hover:shadow-lg">
+                  <div className="relative">
+                    {project.imageUrl ? (
+                      <img 
+                        src={project.imageUrl} 
+                        alt={project.title}
+                        className="w-full h-48 object-cover rounded-t-lg"
+                      />
+                    ) : (
+                      <div className="w-full h-48 bg-dicey-azure/10 rounded-t-lg flex items-center justify-center">
+                        <Code className="h-12 w-12 text-dicey-azure" />
+                      </div>
+                    )}
+                    {project.status && (
+                      <Badge 
+                        className={`absolute top-3 right-3 ${
+                          project.status === 'published' ? 'bg-green-500' : 'bg-blue-500'
+                        }`}
+                      >
+                        {project.status}
+                      </Badge>
+                    )}
+                  </div>
                 
                 <CardHeader className="pb-3">
                   <CardTitle className="text-lg">{project.title}</CardTitle>
                   <CardDescription>{project.description}</CardDescription>
                 </CardHeader>
                 
-                <CardContent className="pt-0">
-                  <div className="space-y-3">
-                    {project.award && (
-                      <div className="flex items-center gap-1 text-dicey-yellow text-sm font-medium">
-                        <Trophy className="h-4 w-4" />
-                        {project.award}
+                  <CardContent className="pt-0">
+                    <div className="space-y-3">
+                      <div className="flex flex-wrap gap-1">
+                        {project.techStack?.map((tag: string, index: number) => (
+                          <Badge key={index} variant="outline" className="text-xs">
+                            {tag}
+                          </Badge>
+                        ))}
                       </div>
-                    )}
-                    
-                    <div className="flex flex-wrap gap-1">
-                      {project.tags.map((tag, index) => (
-                        <Badge key={index} variant="outline" className="text-xs">
-                          {tag}
-                        </Badge>
-                      ))}
+                      
+                      <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
+                        <span>{project.createdAt?.toDate().toLocaleDateString()}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="flex items-center gap-1">
+                            <ExternalLink className="h-3 w-3" />
+                            {project.views || 0}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Trophy className="h-3 w-3" />
+                            {project.likes || 0}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <div className="flex gap-2">
+                        {project.githubUrl && (
+                          <Button size="sm" variant="outline" className="flex-1" asChild>
+                            <a href={project.githubUrl} target="_blank" rel="noopener noreferrer">
+                              <Github className="mr-1 h-3 w-3" />
+                              Code
+                            </a>
+                          </Button>
+                        )}
+                        {project.demoUrl && (
+                          <Button size="sm" variant="outline" className="flex-1" asChild>
+                            <a href={project.demoUrl} target="_blank" rel="noopener noreferrer">
+                              <ExternalLink className="mr-1 h-3 w-3" />
+                              Demo
+                            </a>
+                          </Button>
+                        )}
+                      </div>
                     </div>
-                    
-                    <div className="flex items-center justify-between text-sm text-gray-500">
-                      <span>{project.date}</span>
-                    </div>
-                    
-                    <div className="flex gap-2">
-                      {project.github && (
-                        <Button size="sm" variant="outline" className="flex-1">
-                          <Github className="mr-1 h-3 w-3" />
-                          Code
-                        </Button>
-                      )}
-                      {project.demo && (
-                        <Button size="sm" variant="outline" className="flex-1">
-                          <ExternalLink className="mr-1 h-3 w-3" />
-                          Demo
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </section>
 
         {/* Skills Section */}
