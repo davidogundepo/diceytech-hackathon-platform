@@ -17,6 +17,7 @@ import Profile from "./pages/Profile";
 import Hackathons from "./pages/Hackathons";
 import Notifications from "./pages/Notifications";
 import Achievements from "./pages/Achievements";
+import AdminSeed from "./pages/AdminSeed";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -41,6 +42,7 @@ const App = () => (
             <Route path="/hackathons" element={<Hackathons />} />
             <Route path="/notifications" element={<Notifications />} />
             <Route path="/achievements" element={<Achievements />} />
+            <Route path="/admin/seed" element={<AdminSeed />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
