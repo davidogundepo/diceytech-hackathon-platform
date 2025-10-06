@@ -1,5 +1,21 @@
 import { Timestamp } from 'firebase/firestore';
 
+export interface WorkExperience {
+  title: string;
+  company: string;
+  startDate: string;
+  endDate: string;
+  description: string;
+}
+
+export interface Education {
+  degree: string;
+  school: string;
+  startDate: string;
+  endDate: string;
+  description: string;
+}
+
 export interface User {
   id: string;
   email: string;
@@ -15,6 +31,9 @@ export interface User {
   linkedin?: string;
   twitter?: string;
   skills: string[];
+  goal?: string;
+  experience?: WorkExperience[];
+  education?: Education[];
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
