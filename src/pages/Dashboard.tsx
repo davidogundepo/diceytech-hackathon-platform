@@ -28,21 +28,28 @@ const Dashboard = () => {
 
   useEffect(() => {
     const fetchData = async () => {
+      console.log('Dashboard: fetchData called, user:', user?.id);
+      
       if (!user) {
+        console.log('Dashboard: No user, skipping data fetch');
         setLoading(false);
         return;
       }
       
       try {
+        console.log('Dashboard: Fetching user projects and hackathons');
         const [userProjects, upcomingHackathons] = await Promise.all([
           getUserProjects(user.id, 3),
           getRecentHackathons(5)
         ]);
         
+        console.log('Dashboard: Projects fetched:', userProjects.length, 'projects');
+        console.log('Dashboard: Hackathons fetched:', upcomingHackathons.length, 'hackathons');
+        
         setProjects(userProjects);
         setHackathons(upcomingHackathons);
       } catch (error) {
-        console.error('Error fetching dashboard data:', error);
+        console.error('Dashboard: Error fetching dashboard data:', error);
       } finally {
         setLoading(false);
       }
@@ -65,7 +72,7 @@ const Dashboard = () => {
           <div className="flex items-start justify-between">
             <div>
               <h1 className="text-2xl font-bold mb-2">
-                Welcome back, {user?.displayName || user?.email}! 👋
+                Welcome back, {user?.displayName || user?.email || 'User'}! 👋
               </h1>
               <p className="text-white/90 mb-4">
                 Continue building your tech career with exciting projects and opportunities.
