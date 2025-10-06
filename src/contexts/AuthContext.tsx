@@ -24,15 +24,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    console.log('AuthContext: Setting up auth state listener');
+    
     // Subscribe to Firebase auth state changes
     const unsubscribe = subscribeToAuthChanges(async (fbUser) => {
+      console.log('AuthContext: Auth state changed', fbUser ? `User: ${fbUser.email}` : 'No user');
       setFirebaseUser(fbUser);
+      
       if (fbUser) {
-        // Fetch user profile from Firestore
-        const userProfile = await getUserById(fbUser.uid);
-        if (userProfile) {
-          setUser(userProfile);
-          setIsAuthenticated(true);
+        try {
+          // Fetch user profile from Firestore
+          const userProfile = await getUserById(fbUser.uid);
+          console.log('AuthContext: User profile fetched', userProfile);
+          
+          if (userProfile) {
+            setUser(userProfile);
+            setIsAuthenticated(true);
+          } else {
+            console.error('AuthContext: User profile not found in Firestore for uid:', fbUser.uid);
+            setUser(null);
+            setIsAuthenticated(false);
+          }
+        } catch (error) {
+          console.error('AuthContext: Error fetching user profile', error);
+          setUser(null);
+          setIsAuthenticated(false);
         }
       } else {
         setUser(null);
@@ -47,12 +63,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, password: string) => {
     setLoading(true);
     try {
+      console.log('AuthContext: Attempting login with email:', email);
       const fbUser = await loginWithEmail(email, password);
+      console.log('AuthContext: Login successful, Firebase user:', fbUser.uid);
+      
       const userProfile = await getUserById(fbUser.uid);
+      console.log('AuthContext: User profile after login:', userProfile);
+      
       if (userProfile) {
         setUser(userProfile);
         setIsAuthenticated(true);
+      } else {
+        throw new Error('User profile not found');
       }
+    } catch (error) {
+      console.error('AuthContext: Login error:', error);
+      throw error;
     } finally {
       setLoading(false);
     }
@@ -61,12 +87,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const register = async (userData: { fullName: string; email: string; password: string; username: string }) => {
     setLoading(true);
     try {
+      console.log('AuthContext: Attempting registration with email:', userData.email);
       const fbUser = await registerWithEmail(userData.email, userData.password, userData.fullName);
+      console.log('AuthContext: Registration successful, Firebase user:', fbUser.uid);
+      
       const userProfile = await getUserById(fbUser.uid);
+      console.log('AuthContext: User profile after registration:', userProfile);
+      
       if (userProfile) {
         setUser(userProfile);
         setIsAuthenticated(true);
+      } else {
+        throw new Error('User profile not found after registration');
       }
+    } catch (error) {
+      console.error('AuthContext: Registration error:', error);
+      throw error;
     } finally {
       setLoading(false);
     }
@@ -75,12 +111,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const handleGoogleLogin = async () => {
     setLoading(true);
     try {
+      console.log('AuthContext: Attempting Google login');
       const fbUser = await loginWithGoogle();
+      console.log('AuthContext: Google login successful, Firebase user:', fbUser.uid);
+      
       const userProfile = await getUserById(fbUser.uid);
+      console.log('AuthContext: User profile after Google login:', userProfile);
+      
       if (userProfile) {
         setUser(userProfile);
         setIsAuthenticated(true);
+      } else {
+        throw new Error('User profile not found');
       }
+    } catch (error) {
+      console.error('AuthContext: Google login error:', error);
+      throw error;
     } finally {
       setLoading(false);
     }
