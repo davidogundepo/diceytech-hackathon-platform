@@ -6,6 +6,7 @@ import {
   addDoc, 
   updateDoc, 
   deleteDoc, 
+  setDoc,
   query, 
   where, 
   orderBy, 
@@ -26,11 +27,25 @@ import {
 
 // User Operations
 export const getUserById = async (userId: string): Promise<User | null> => {
+  console.log('🔍 Checking if user exists:', userId);
   const userDoc = await getDoc(doc(db, 'users', userId));
   if (userDoc.exists()) {
+    console.log('✅ User found:', userDoc.data().email);
     return { id: userDoc.id, ...userDoc.data() } as User;
   }
+  console.log('❌ User not found');
   return null;
+};
+
+export const createUserWithId = async (userId: string, userData: Omit<User, 'id' | 'createdAt' | 'updatedAt'>): Promise<void> => {
+  console.log('🆕 Creating new user with ID:', userId, 'Email:', userData.email);
+  const now = Timestamp.now();
+  await setDoc(doc(db, 'users', userId), {
+    ...userData,
+    createdAt: now,
+    updatedAt: now
+  });
+  console.log('✅ User document created successfully');
 };
 
 export const createUser = async (userData: Omit<User, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> => {
