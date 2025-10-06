@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Eye, EyeOff, Users, Trophy, Building, Star, Zap, Target, Code, UserPlus, LogIn } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { FcGoogle } from 'react-icons/fc';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -21,7 +22,7 @@ const Index = () => {
   const [fullName, setFullName] = useState('');
   const [username, setUsername] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { login, register } = useAuth();
+  const { login, register, loginWithGoogle } = useAuth();
   const { toast } = useToast();
   const { theme } = useTheme();
   const navigate = useNavigate();
@@ -58,6 +59,26 @@ const Index = () => {
       toast({
         title: isLogin ? "Login failed" : "Registration failed",
         description: "Please check your details and try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setIsLoading(true);
+    try {
+      await loginWithGoogle();
+      toast({
+        title: "Welcome!",
+        description: "You have successfully signed in with Google.",
+      });
+      navigate('/dashboard');
+    } catch (error) {
+      toast({
+        title: "Google Sign-In failed",
+        description: "Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -249,6 +270,28 @@ const Index = () => {
                     {isLoading ? (isLogin ? "Signing in..." : "Creating account...") : (isLogin ? "Sign In" : "Create Account")}
                   </Button>
                 </form>
+
+                <div className="relative my-4">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-gray-300 dark:border-gray-600"></div>
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-white dark:bg-gray-900 px-2 text-gray-500 dark:text-gray-400">
+                      Or continue with
+                    </span>
+                  </div>
+                </div>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full h-11 text-sm font-semibold border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800"
+                  onClick={handleGoogleSignIn}
+                  disabled={isLoading}
+                >
+                  <FcGoogle className="mr-2 h-5 w-5" />
+                  Sign in with Google
+                </Button>
 
                 <div className="text-center">
                   <p className="text-sm text-gray-600 dark:text-gray-300">
@@ -540,6 +583,28 @@ const Index = () => {
                   {isLoading ? (isLogin ? "Signing in..." : "Creating account...") : (isLogin ? "Sign In" : "Create Account")}
                 </Button>
               </form>
+
+              <div className="relative my-4">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-300 dark:border-gray-600"></div>
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-white dark:bg-gray-900 px-2 text-gray-500 dark:text-gray-400">
+                    Or continue with
+                  </span>
+                </div>
+              </div>
+
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full h-11 text-sm font-semibold border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800"
+                onClick={handleGoogleSignIn}
+                disabled={isLoading}
+              >
+                <FcGoogle className="mr-2 h-5 w-5" />
+                Sign in with Google
+              </Button>
 
               <div className="text-center">
                 <p className="text-sm text-gray-600 dark:text-gray-300">
