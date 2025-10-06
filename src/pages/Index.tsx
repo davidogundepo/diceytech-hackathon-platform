@@ -22,11 +22,21 @@ const Index = () => {
   const [fullName, setFullName] = useState('');
   const [username, setUsername] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { login, register, loginWithGoogle } = useAuth();
+  const { login, register, loginWithGoogle, isAuthenticated, loading } = useAuth();
   const { toast } = useToast();
   const { theme } = useTheme();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+
+  // Redirect to dashboard if already logged in
+  React.useEffect(() => {
+    if (!loading && isAuthenticated) {
+      console.log('Index: User already authenticated, redirecting to dashboard');
+      setTimeout(() => {
+        navigate('/dashboard', { replace: true });
+      }, 100);
+    }
+  }, [isAuthenticated, loading, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,11 +44,14 @@ const Index = () => {
 
     try {
       if (isLogin) {
+        console.log('Index: Attempting login');
         await login(email, password);
+        console.log('Index: Login successful');
         toast({
           title: "Welcome back!",
           description: "You have successfully logged in.",
         });
+        // Navigation will be handled by the useEffect hook
       } else {
         if (password !== confirmPassword) {
           toast({
@@ -46,19 +59,56 @@ const Index = () => {
             description: "Please make sure your passwords match.",
             variant: "destructive",
           });
+          setIsLoading(false);
           return;
         }
+        console.log('Index: Attempting registration');
         await register({ fullName, username, email, password });
+        console.log('Index: Registration successful');
         toast({
           title: "Account created!",
           description: "Welcome to DiceyTech! You can now start participating in hackathons.",
         });
+        // Navigation will be handled by the useEffect hook
       }
-      navigate('/dashboard');
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Index: Auth error:', error);
+      const errorCode = error?.code;
+      const errorMessage = error?.message;
+      
+      let title = isLogin ? "Login failed" : "Registration failed";
+      let description = "Please check your details and try again.";
+      
+      if (isLogin) {
+        if (errorCode === 'auth/user-not-found') {
+          title = "Account not found";
+          description = "This account doesn't exist. Please sign up first.";
+        } else if (errorCode === 'auth/wrong-password') {
+          title = "Wrong password";
+          description = "The password you entered is incorrect.";
+        } else if (errorCode === 'auth/invalid-email') {
+          title = "Invalid email";
+          description = "Please enter a valid email address.";
+        } else if (errorCode === 'auth/too-many-requests') {
+          title = "Too many attempts";
+          description = "Please wait a moment before trying again.";
+        }
+      } else {
+        if (errorCode === 'auth/email-already-in-use') {
+          title = "Email already registered";
+          description = "This email is already in use. Please sign in instead.";
+        } else if (errorCode === 'auth/weak-password') {
+          title = "Weak password";
+          description = "Password should be at least 6 characters.";
+        } else if (errorCode === 'auth/invalid-email') {
+          title = "Invalid email";
+          description = "Please enter a valid email address.";
+        }
+      }
+      
       toast({
-        title: isLogin ? "Login failed" : "Registration failed",
-        description: "Please check your details and try again.",
+        title,
+        description,
         variant: "destructive",
       });
     } finally {
@@ -74,7 +124,7 @@ const Index = () => {
         title: "Welcome!",
         description: "You have successfully signed in with Google.",
       });
-      navigate('/dashboard');
+      // Navigation will be handled by the useEffect hook
     } catch (error) {
       toast({
         title: "Google Sign-In failed",
