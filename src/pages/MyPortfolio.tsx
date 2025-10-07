@@ -176,7 +176,10 @@ const MyPortfolio = () => {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600 dark:text-gray-300">Profile Views</p>
+                    <div className="flex items-center gap-2 mb-1">
+                      <p className="text-sm font-medium text-gray-600 dark:text-gray-300">Profile Views</p>
+                      {/* <Badge variant="outline" className="text-xs">Coming Soon</Badge> */}
+                    </div>
                     <p className="text-2xl font-bold text-gray-900 dark:text-white">{portfolioStats.profileViews}</p>
                   </div>
                   <div className="p-3 rounded-full bg-green-100 text-green-600">

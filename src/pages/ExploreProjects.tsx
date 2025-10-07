@@ -19,7 +19,7 @@ import {
   Trophy,
   Star
 } from "lucide-react";
-import { getAllProjects, getUserSavedProjectIds, toggleSaveProject } from '@/services/firestoreService';
+import { getAllProjects, getUserSavedProjectIds, toggleSaveProject, getUserLikedProjectIds, toggleLikeProject } from '@/services/firestoreService';
 import { Project } from '@/types/firestore';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -31,6 +31,7 @@ const ExploreProjects = () => {
   const [selectedDifficulty, setSelectedDifficulty] = useState('all');
   const [projects, setProjects] = useState<Project[]>([]);
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+  const [likedIds, setLikedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -49,16 +50,20 @@ const ExploreProjects = () => {
   }, []);
 
   useEffect(() => {
-    const loadSaved = async () => {
+    const loadSavedAndLiked = async () => {
       if (!user?.id) return;
       try {
-        const ids = await getUserSavedProjectIds(user.id);
-        setSavedIds(new Set(ids));
+        const [savedProjectIds, likedProjectIds] = await Promise.all([
+          getUserSavedProjectIds(user.id),
+          getUserLikedProjectIds(user.id)
+        ]);
+        setSavedIds(new Set(savedProjectIds));
+        setLikedIds(new Set(likedProjectIds));
       } catch (e) {
-        console.error('Error loading saved projects', e);
+        console.error('Error loading saved/liked projects', e);
       }
     };
-    loadSaved();
+    loadSavedAndLiked();
   }, [user?.id]);
 
   const filteredProjects = projects.filter((project) => {
@@ -68,7 +73,8 @@ const ExploreProjects = () => {
     const matchesCategory = selectedCategory === 'all' || 
                            project.category?.toLowerCase() === selectedCategory.toLowerCase();
     
-    const matchesDifficulty = selectedDifficulty === 'all' || project.difficulty === selectedDifficulty;
+    const matchesDifficulty = selectedDifficulty === 'all' || 
+                             project.difficulty?.toLowerCase() === selectedDifficulty.toLowerCase();
     
     return matchesSearch && matchesCategory && matchesDifficulty;
   });
@@ -83,6 +89,10 @@ const ExploreProjects = () => {
             <p className="text-gray-600 mt-1">Discover amazing projects from the community</p>
           </div>
           <div className="flex gap-2">
+            <Button variant="outline" onClick={() => navigate('/saved-projects')}>
+              <Heart className="mr-2 h-4 w-4" />
+              Saved Projects
+            </Button>
             <Button onClick={() => navigate('/add-project')} className="bg-dicey-purple hover:bg-dicey-purple/90">
               <Trophy className="mr-2 h-4 w-4" />
               Add Project
@@ -151,28 +161,30 @@ const ExploreProjects = () => {
                   src={project.imageUrl || 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=300'} 
                   alt={project.title}
                   className="w-full h-48 object-cover rounded-t-lg"
-                />
-                <Button
-                  variant={savedIds.has(project.id) ? "secondary" : "ghost"}
-                  size="icon"
-                  className="absolute bottom-3 right-3 bg-white/90 hover:bg-white"
-                  onClick={async (e) => {
-                    e.stopPropagation();
-                    if (!user?.id) return;
-                    try {
-                      const nowSaved = await toggleSaveProject(user.id, project.id);
-                      setSavedIds((prev) => {
-                        const n = new Set(prev);
-                        if (nowSaved) n.add(project.id); else n.delete(project.id);
-                        return n;
-                      });
-                    } catch (err) {
-                      console.error('Toggle save failed', err);
-                    }
-                  }}
-                >
-                  <Heart className="h-4 w-4" fill={savedIds.has(project.id) ? "currentColor" : "none"} />
-                </Button>
+                 />
+                <div className="absolute bottom-3 right-3 flex gap-2">
+                  <Button
+                    variant={savedIds.has(project.id) ? "secondary" : "ghost"}
+                    size="icon"
+                    className="bg-white/90 hover:bg-white"
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      if (!user?.id) return;
+                      try {
+                        const nowSaved = await toggleSaveProject(user.id, project.id);
+                        setSavedIds((prev) => {
+                          const n = new Set(prev);
+                          if (nowSaved) n.add(project.id); else n.delete(project.id);
+                          return n;
+                        });
+                      } catch (err) {
+                        console.error('Toggle save failed', err);
+                      }
+                    }}
+                  >
+                    <Heart className="h-4 w-4" fill={savedIds.has(project.id) ? "currentColor" : "none"} />
+                  </Button>
+                </div>
               </div>
               
               <CardHeader className="pb-3">
@@ -196,9 +208,39 @@ const ExploreProjects = () => {
                   </div>
                   
                   <div className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-1 text-gray-500">
-                      <Calendar className="h-4 w-4" />
-                      <span>{new Date(project.createdAt.seconds * 1000).toLocaleDateString()}</span>
+                    <div className="flex items-center gap-3 text-gray-500">
+                      <div className="flex items-center gap-1">
+                        <Calendar className="h-4 w-4" />
+                        <span>{new Date(project.createdAt.seconds * 1000).toLocaleDateString()}</span>
+                      </div>
+                      <button
+                        className="flex items-center gap-1 hover:text-dicey-magenta transition-colors"
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          if (!user?.id) return;
+                          try {
+                            const nowLiked = await toggleLikeProject(user.id, project.id);
+                            setLikedIds((prev) => {
+                              const n = new Set(prev);
+                              if (nowLiked) n.add(project.id); else n.delete(project.id);
+                              return n;
+                            });
+                            // Update local project likes count
+                            setProjects((prev) => 
+                              prev.map((p) => 
+                                p.id === project.id 
+                                  ? { ...p, likes: (p.likes || 0) + (nowLiked ? 1 : -1) } 
+                                  : p
+                              )
+                            );
+                          } catch (err) {
+                            console.error('Toggle like failed', err);
+                          }
+                        }}
+                      >
+                        <Star className={`h-4 w-4 ${likedIds.has(project.id) ? 'fill-dicey-magenta text-dicey-magenta' : ''}`} />
+                        <span>{project.likes || 0}</span>
+                      </button>
                     </div>
                     <div className="flex items-center gap-2">
                       {project.difficulty && <Badge variant="secondary">{project.difficulty}</Badge>}

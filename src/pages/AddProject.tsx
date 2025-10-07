@@ -211,13 +211,18 @@ const AddProject = () => {
             <p className="text-gray-600 mt-1">Share your project with the community</p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={handleSave}>
+            <Button variant="outline" onClick={handleSave} className="border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-800">
               Save Draft
             </Button>
-            <Button onClick={handleSubmit} className="bg-dicey-purple hover:bg-dicey-purple/90">
+            {/* <Button onClick={handleSubmit} className="bg-dicey-purple hover:bg-dicey-purple/90 text-white">
+              <Trophy className="mr-2 h-4 w-4" />
+              Submit Project
+            </Button> */}
+            <Button onClick={handleSubmit} className="bg-dicey-purple hover:bg-dicey-purple/90 text-black dark:text-white border border-black dark:border-white rounded-md">
               <Trophy className="mr-2 h-4 w-4" />
               Submit Project
             </Button>
+
           </div>
         </div>
 

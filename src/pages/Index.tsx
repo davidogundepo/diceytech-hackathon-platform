@@ -138,8 +138,8 @@ const Index = () => {
 
   const stats = [
     { label: 'Projects', value: '10+', icon: Trophy, color: 'bg-dicey-yellow' },
-    { label: 'Talents', value: '400+', icon: Users, color: 'bg-dicey-magenta' },
-    { label: 'Organizations', value: '50+', icon: Building, color: 'bg-dicey-azure' },
+    { label: 'Talents', value: '4500+', icon: Users, color: 'bg-dicey-magenta' },
+    { label: 'Organizations', value: '20+', icon: Building, color: 'bg-dicey-azure' },
   ];
 
   const features = [

@@ -9,6 +9,7 @@ import {
 } from 'firebase/auth';
 import { auth } from '@/config/firebase';
 import { createUserWithId, getUserById } from './firestoreService';
+import { sendWelcomeEmails } from './emailService';
 
 export const loginWithEmail = async (email: string, password: string) => {
   console.log('🔐 Attempting email/password login:', email);
@@ -34,9 +35,12 @@ export const registerWithEmail = async (email: string, password: string, display
       displayName: displayName,
       photoURL: user.photoURL,
       role: 'user',
-      profileCompleteness: 60,
+      profileCompleteness: 15,
       skills: []
     });
+    
+    // Send welcome emails
+    sendWelcomeEmails(user.email!, displayName);
     
     console.log('✅ Account created successfully, redirecting...');
     return user;
@@ -64,9 +68,12 @@ export const loginWithGoogle = async () => {
         displayName: user.displayName || '',
         photoURL: user.photoURL,
         role: 'user',
-        profileCompleteness: 70,
+        profileCompleteness: 15,
         skills: []
       });
+      
+      // Send welcome emails for new Google users
+      sendWelcomeEmails(user.email!, user.displayName || 'New User');
     } else {
       console.log('✅ Existing user found:', existingUser.email);
     }

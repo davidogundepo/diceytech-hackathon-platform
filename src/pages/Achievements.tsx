@@ -100,6 +100,18 @@ const Achievements = () => {
   return (
     <DashboardLayout>
       <div className="space-y-6 animate-fade-in">
+        {/* Coming Soon Banner */}
+        <Card className="bg-gradient-to-r from-dicey-azure to-dicey-magenta border-0">
+          <CardContent className="p-8 text-center text-white">
+            <TrendingUp className="h-16 w-16 mx-auto mb-4 opacity-90" />
+            <h2 className="text-3xl font-bold mb-2">🚀 Achievements System Coming Soon!</h2>
+            <p className="text-lg text-white/90 max-w-2xl mx-auto">
+              We're building something amazing! Soon you'll be able to track your progress, unlock exclusive badges, 
+              and compete with other developers. Stay tuned for epic rewards and achievements!
+            </p>
+          </CardContent>
+        </Card>
+
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>

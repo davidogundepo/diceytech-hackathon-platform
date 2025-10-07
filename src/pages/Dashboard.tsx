@@ -18,6 +18,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { getUserProjects, getRecentHackathons, getUserApplications, getUserHackathonApplicationIds } from '@/services/firestoreService';
 import { Project, Hackathon } from '@/types/firestore';
+import WelcomeModal from '@/components/WelcomeModal';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -27,6 +28,8 @@ const Dashboard = () => {
   const [applicationsCount, setApplicationsCount] = useState(0);
   const [hackathonsJoinedCount, setHackathonsJoinedCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [isFirstLogin, setIsFirstLogin] = useState(false);
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -56,6 +59,21 @@ const Dashboard = () => {
         setHackathons(upcomingHackathons);
         setApplicationsCount(userApplications.length);
         setHackathonsJoinedCount(hackathonIds.length);
+        
+        // Check if first login - user created within last 5 minutes
+        if (user.createdAt) {
+          const createdTime = user.createdAt.seconds * 1000;
+          const now = Date.now();
+          const fiveMinutes = 5 * 60 * 1000;
+          const isNew = now - createdTime < fiveMinutes;
+          setIsFirstLogin(isNew);
+          
+          // Show welcome modal for new users (only once per session)
+          if (isNew && !sessionStorage.getItem('welcomeModalShown')) {
+            setShowWelcomeModal(true);
+            sessionStorage.setItem('welcomeModalShown', 'true');
+          }
+        }
       } catch (error) {
         console.error('Dashboard: Error fetching dashboard data:', error);
       } finally {
@@ -70,17 +88,22 @@ const Dashboard = () => {
     { title: 'Active Projects', value: projects.length.toString(), icon: Trophy, color: 'text-dicey-azure' },
     { title: 'Hackathons Joined', value: hackathonsJoinedCount.toString(), icon: Users, color: 'text-dicey-magenta' },
     { title: 'Applications', value: applicationsCount.toString(), icon: Calendar, color: 'text-dicey-yellow' },
-    { title: 'Profile Views', value: user?.profileViews?.toString() || '0', icon: Target, color: 'text-green-600' },
+    { title: 'Profile Views', value: user?.profileViews?.toString() || '0', badge: 'Coming Soon', icon: Target, color: 'text-green-600' },
   ];
 
   return (
     <DashboardLayout>
+      <WelcomeModal 
+        isOpen={showWelcomeModal} 
+        userName={user?.displayName || 'there'}
+        onClose={() => setShowWelcomeModal(false)}
+      />
       <div className="space-y-6 animate-fade-in">
         <div className="bg-dicey-azure rounded-xl p-6 text-white">
           <div className="flex items-start justify-between">
             <div>
               <h1 className="text-2xl font-bold mb-2">
-                Welcome back, {user?.displayName || user?.email || 'User'}! 👋
+                {isFirstLogin ? 'Welcome' : 'Welcome back'}, {user?.displayName || user?.email || 'User'}! 👋
               </h1>
               <p className="text-white/90 mb-4">
                 Continue building your tech career with exciting projects and opportunities.
@@ -109,7 +132,14 @@ const Dashboard = () => {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600 dark:text-gray-300">{stat.title}</p>
+                    <div className="flex items-center gap-2 mb-1">
+                      <p className="text-sm font-medium text-gray-600 dark:text-gray-300">{stat.title}</p>
+                      {(stat as any).badge && (
+                        <Badge variant="outline" className="text-xs">
+                          {(stat as any).badge}
+                        </Badge>
+                      )}
+                    </div>
                     <p className="text-2xl font-bold text-gray-900 dark:text-white">{stat.value}</p>
                   </div>
                   <div className={`p-3 rounded-full bg-gray-100 dark:bg-gray-800 ${stat.color}`}>

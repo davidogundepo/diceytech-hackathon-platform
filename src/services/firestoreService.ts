@@ -67,12 +67,8 @@ export const updateUser = async (userId: string, userData: Partial<User>): Promi
 
 // Project Operations
 export const getAllProjects = async (): Promise<Project[]> => {
-  // Fetch all published projects without orderBy to avoid composite index requirement
-  const q = query(
-    collection(db, 'projects'), 
-    where('status', '==', 'published')
-  );
-  const querySnapshot = await getDocs(q);
+  // Fetch all projects without filtering by status
+  const querySnapshot = await getDocs(collection(db, 'projects'));
   const projects = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Project));
   
   // Sort client-side to avoid composite index requirement
@@ -219,6 +215,19 @@ export const createApplication = async (applicationData: Omit<Application, 'id' 
     createdAt: now,
     updatedAt: now
   });
+  
+  // Increment participant count if it's a hackathon application
+  if (applicationData.type === 'hackathon' && applicationData.hackathonId) {
+    const hackathonRef = doc(db, 'hackathons', applicationData.hackathonId);
+    const hackathonDoc = await getDoc(hackathonRef);
+    if (hackathonDoc.exists()) {
+      const currentCount = hackathonDoc.data().participantCount || 0;
+      await updateDoc(hackathonRef, {
+        participantCount: currentCount + 1
+      });
+    }
+  }
+  
   return docRef.id;
 };
 
@@ -314,6 +323,34 @@ export const awardAchievement = async (userId: string, achievementId: string): P
     progress: 100
   });
   return docRef.id;
+};
+
+// Like/Unlike Projects
+export const toggleLikeProject = async (userId: string, projectId: string): Promise<boolean> => {
+  const likeRef = doc(db, 'user_project_likes', `${userId}_${projectId}`);
+  const snap = await getDoc(likeRef);
+  const projectRef = doc(db, 'projects', projectId);
+  const projectSnap = await getDoc(projectRef);
+  
+  if (!projectSnap.exists()) return false;
+  
+  const currentLikes = projectSnap.data().likes || 0;
+  
+  if (snap.exists()) {
+    await deleteDoc(likeRef);
+    await updateDoc(projectRef, { likes: Math.max(0, currentLikes - 1) });
+    return false; // now unliked
+  }
+  
+  await setDoc(likeRef, { userId, projectId, createdAt: Timestamp.now() });
+  await updateDoc(projectRef, { likes: currentLikes + 1 });
+  return true; // now liked
+};
+
+export const getUserLikedProjectIds = async (userId: string): Promise<string[]> => {
+  const q = query(collection(db, 'user_project_likes'), where('userId', '==', userId));
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(d => (d.data() as any).projectId as string);
 };
 
 // Saved Projects (Favorites)

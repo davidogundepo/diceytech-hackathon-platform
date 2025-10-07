@@ -21,6 +21,7 @@ import HackathonDetails from "./pages/HackathonDetails";
 import Notifications from "./pages/Notifications";
 import Achievements from "./pages/Achievements";
 import SavedEvents from "./pages/SavedEvents";
+import SavedProjects from "./pages/SavedProjects";
 import AdminSeed from "./pages/AdminSeed";
 import NotFound from "./pages/NotFound";
 
@@ -49,6 +50,7 @@ const App = () => (
               <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
               <Route path="/achievements" element={<ProtectedRoute><Achievements /></ProtectedRoute>} />
               <Route path="/saved-events" element={<ProtectedRoute><SavedEvents /></ProtectedRoute>} />
+              <Route path="/saved-projects" element={<ProtectedRoute><SavedProjects /></ProtectedRoute>} />
               <Route path="/admin/seed" element={<ProtectedRoute><AdminSeed /></ProtectedRoute>} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />

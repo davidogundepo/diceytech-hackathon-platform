@@ -130,11 +130,29 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
             <div className="mt-8 pt-4 border-t border-gray-200 dark:border-gray-800">
               <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Quick Actions</div>
               <div className="space-y-2">
-                <Button variant="ghost" size="sm" className="w-full justify-start hover:bg-dicey-yellow/20" onClick={() => navigate('/hackathons')}>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className={`w-full justify-start ${
+                    isActive('/hackathons') 
+                      ? 'bg-dicey-yellow/20 text-dicey-yellow' 
+                      : 'hover:bg-dicey-yellow/20'
+                  }`}
+                  onClick={() => navigate('/hackathons')}
+                >
                   <Trophy className="mr-2 h-4 w-4" />
                   Hackathons
                 </Button>
-                <Button variant="ghost" size="sm" className="w-full justify-start hover:bg-dicey-magenta/20" onClick={() => navigate('/notifications')}>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className={`w-full justify-start ${
+                    isActive('/notifications') 
+                      ? 'bg-dicey-magenta/20 text-dicey-magenta' 
+                      : 'hover:bg-dicey-magenta/20'
+                  }`}
+                  onClick={() => navigate('/notifications')}
+                >
                   <Bell className="mr-2 h-4 w-4" />
                   Notifications
                   {unreadCount > 0 && (
@@ -143,7 +161,16 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
                     </Badge>
                   )}
                 </Button>
-                <Button variant="ghost" size="sm" className="w-full justify-start hover:bg-dicey-azure/20" onClick={() => navigate('/achievements')}>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className={`w-full justify-start ${
+                    isActive('/achievements') 
+                      ? 'bg-dicey-azure/20 text-dicey-azure' 
+                      : 'hover:bg-dicey-azure/20'
+                  }`}
+                  onClick={() => navigate('/achievements')}
+                >
                   <Award className="mr-2 h-4 w-4" />
                   Achievements
                 </Button>

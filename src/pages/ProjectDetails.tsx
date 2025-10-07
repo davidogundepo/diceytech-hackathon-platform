@@ -8,12 +8,16 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import DashboardLayout from '@/components/DashboardLayout';
+import { useAuth } from '@/contexts/AuthContext';
+import { getUserLikedProjectIds, toggleLikeProject, getUserSavedProjectIds, toggleSaveProject } from '@/services/firestoreService';
 
 const ProjectDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [isSaved, setIsSaved] = useState(false);
+  const [isLiked, setIsLiked] = useState(false);
   const [hasJoined, setHasJoined] = useState(false);
   const [project, setProject] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -27,6 +31,16 @@ const ProjectDetails = () => {
         const { getProjectById } = await import('@/services/firestoreService');
         const projectData = await getProjectById(id);
         setProject(projectData);
+        
+        // Check if user has liked and saved this project
+        if (user?.id) {
+          const [likedIds, savedIds] = await Promise.all([
+            getUserLikedProjectIds(user.id),
+            getUserSavedProjectIds(user.id)
+          ]);
+          setIsLiked(likedIds.includes(id));
+          setIsSaved(savedIds.includes(id));
+        }
       } catch (error) {
         console.error('Error fetching project:', error);
         toast({
@@ -40,7 +54,7 @@ const ProjectDetails = () => {
     };
 
     fetchProject();
-  }, [id]);
+  }, [id, user?.id]);
 
   if (loading) {
     return (
@@ -74,48 +88,32 @@ const ProjectDetails = () => {
     );
   }
 
-  const mockProject = {
-    id: id,
-    title: "AI-Powered Healthcare Assistant",
-    description: "A comprehensive healthcare management system that uses AI to assist doctors in diagnosis and treatment recommendations. The platform includes patient management, medical history tracking, and predictive analytics.",
-    type: "hackathon",
-    status: "active",
-    difficulty: "Advanced",
-    category: "Healthcare",
-    technologies: ["React", "Python", "TensorFlow", "Node.js", "MongoDB"],
-    startDate: "2024-01-15",
-    endDate: "2024-02-15",
-    participants: 156,
-    maxParticipants: 200,
-    prize: "$50,000",
-    organizer: {
-      name: "HealthTech Initiative",
-      avatar: "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=150",
-    },
-    requirements: [
-      "Experience with AI/ML frameworks",
-      "Healthcare domain knowledge preferred",
-      "Team of 2-4 members",
-      "Original code submission required"
-    ],
-    timeline: [
-      { phase: "Registration", date: "Jan 15 - Jan 20", status: "completed" },
-      { phase: "Development", date: "Jan 21 - Feb 10", status: "active" },
-      { phase: "Submission", date: "Feb 11 - Feb 13", status: "upcoming" },
-      { phase: "Judging", date: "Feb 14 - Feb 15", status: "upcoming" }
-    ],
-    mentors: [
-      { name: "Dr. Sarah Johnson", role: "Healthcare AI Expert", avatar: "https://images.unsplash.com/photo-1494790108755-2616b6d5c0b4?w=150" },
-      { name: "Michael Chen", role: "Tech Lead", avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150" }
-    ]
-  };
 
-  const handleSaveProject = () => {
-    setIsSaved(!isSaved);
-    toast({
-      title: isSaved ? "Project Removed" : "Project Saved",
-      description: isSaved ? "Project removed from your saved list" : "Project added to your saved list",
-    });
+  const handleSaveProject = async () => {
+    if (!user?.id || !id) {
+      toast({
+        title: "Please log in",
+        description: "You need to be logged in to save projects",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    try {
+      const nowSaved = await toggleSaveProject(user.id, id);
+      setIsSaved(nowSaved);
+      toast({
+        title: nowSaved ? "Project Saved" : "Project Removed",
+        description: nowSaved ? "Project added to your saved list" : "Project removed from your saved list",
+      });
+    } catch (error) {
+      console.error('Toggle save failed', error);
+      toast({
+        title: "Error",
+        description: "Failed to save project",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleJoinProject = () => {
@@ -146,15 +144,26 @@ const ProjectDetails = () => {
 
         {/* Project Header */}
         <div className="bg-dicey-azure rounded-xl p-6 text-white">
+          {project.imageUrl && (
+            <div className="mb-6">
+              <img 
+                src={project.imageUrl} 
+                alt={project.title}
+                className="w-full h-96 object-cover rounded-lg"
+              />
+            </div>
+          )}
           <div className="flex justify-between items-start mb-4">
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-2">
                 <Badge variant="secondary" className="bg-dicey-yellow text-dicey-dark-pink">
-                  {project.type === 'hackathon' ? 'Hackathon' : 'Practice Project'}
+                  {project.category || 'Project'}
                 </Badge>
-                <Badge variant="secondary" className="bg-dicey-magenta text-white">
-                  {project.difficulty}
-                </Badge>
+                {project.difficulty && (
+                  <Badge variant="secondary" className="bg-dicey-magenta text-white">
+                    {project.difficulty}
+                  </Badge>
+                )}
               </div>
               <h1 className="text-3xl font-bold mb-2">{project.title}</h1>
               <p className="text-white/90 text-lg">{project.description}</p>
@@ -169,30 +178,73 @@ const ProjectDetails = () => {
                 <Heart className={`h-4 w-4 mr-2 ${isSaved ? 'fill-current' : ''}`} />
                 {isSaved ? 'Saved' : 'Save'}
               </Button>
-              <Button variant="secondary" size="sm" className="bg-white/20 text-white hover:bg-white/30">
-                <ExternalLink className="h-4 w-4 mr-2" />
-                View Demo
-              </Button>
+              {(project.demoUrl || project.githubUrl) && (
+                <Button 
+                  variant="secondary" 
+                  size="sm" 
+                  className="bg-white/20 text-white hover:bg-white/30"
+                  onClick={() => window.open(project.demoUrl || project.githubUrl, '_blank')}
+                >
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  {project.demoUrl ? 'View Demo' : 'View on GitHub'}
+                </Button>
+              )}
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
             <div className="flex items-center gap-2">
               <Calendar className="h-4 w-4" />
-              <span className="text-sm">Ends Feb 15, 2024</span>
+              <span className="text-sm">
+                {project.createdAt 
+                  ? new Date(project.createdAt.seconds * 1000).toLocaleDateString()
+                  : 'N/A'}
+              </span>
             </div>
-            <div className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              <span className="text-sm">{project.participants}/{project.maxParticipants} participants</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <GitBranch className="h-4 w-4" />
-              <span className="text-sm">{project.category}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Star className="h-4 w-4" />
-              <span className="text-sm">Prize: {project.prize}</span>
-            </div>
+            {project.views !== undefined && (
+              <div className="flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                <span className="text-sm">{project.views} views</span>
+              </div>
+            )}
+            {project.category && (
+              <div className="flex items-center gap-2">
+                <GitBranch className="h-4 w-4" />
+                <span className="text-sm">{project.category}</span>
+              </div>
+            )}
+            {project.likes !== undefined && (
+              <button
+                className="flex items-center gap-2 hover:text-dicey-yellow transition-colors"
+                onClick={async () => {
+                  if (!user?.id) {
+                    toast({
+                      title: "Please log in",
+                      description: "You need to be logged in to like projects",
+                      variant: "destructive"
+                    });
+                    return;
+                  }
+                  try {
+                    const nowLiked = await toggleLikeProject(user.id, id!);
+                    setIsLiked(nowLiked);
+                    setProject((prev: any) => ({
+                      ...prev,
+                      likes: (prev.likes || 0) + (nowLiked ? 1 : -1)
+                    }));
+                    toast({
+                      title: nowLiked ? "Project Liked!" : "Like Removed",
+                      description: nowLiked ? "You liked this project" : "You unliked this project"
+                    });
+                  } catch (error) {
+                    console.error('Toggle like failed', error);
+                  }
+                }}
+              >
+                <Star className={`h-4 w-4 ${isLiked ? 'fill-dicey-yellow text-dicey-yellow' : ''}`} />
+                <span className="text-sm">{project.likes || 0} likes</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -200,129 +252,120 @@ const ProjectDetails = () => {
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
             {/* Technologies */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Technologies Required</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-wrap gap-2">
-                  {project.technologies.map((tech, index) => (
-                    <Badge key={index} variant="outline" className="border-dicey-azure text-dicey-azure">
-                      {tech}
-                    </Badge>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+            {project.techStack && project.techStack.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Technologies Used</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-wrap gap-2">
+                    {project.techStack.map((tech, index) => (
+                      <Badge key={index} variant="outline" className="border-dicey-azure text-dicey-azure">
+                        {tech}
+                      </Badge>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
-            {/* Requirements */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Requirements</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-2">
-                  {project.requirements.map((req, index) => (
-                    <li key={index} className="flex items-start gap-2">
-                      <div className="w-2 h-2 bg-dicey-magenta rounded-full mt-2 flex-shrink-0"></div>
-                      <span className="text-sm text-gray-600 dark:text-gray-300">{req}</span>
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
-
-            {/* Timeline */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Project Timeline</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {project.timeline.map((phase, index) => (
-                    <div key={index} className="flex items-center gap-4">
-                      <div className={`w-3 h-3 rounded-full ${
-                        phase.status === 'completed' ? 'bg-dicey-yellow' :
-                        phase.status === 'active' ? 'bg-dicey-magenta' :
-                        'bg-gray-300'
-                      }`}></div>
-                      <div className="flex-1">
-                        <div className="flex justify-between items-center">
-                          <span className="font-medium">{phase.phase}</span>
-                          <span className="text-sm text-gray-500">{phase.date}</span>
-                        </div>
-                      </div>
+            {/* Project Details */}
+            {(project.challenges || project.learnings || project.futureImprovements) && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Project Details</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {project.challenges && (
+                    <div>
+                      <h4 className="font-medium mb-2 text-dicey-magenta">Challenges</h4>
+                      <p className="text-sm text-gray-600 dark:text-gray-300">{project.challenges}</p>
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+                  )}
+                  {project.learnings && (
+                    <div>
+                      <h4 className="font-medium mb-2 text-dicey-magenta">Key Learnings</h4>
+                      <p className="text-sm text-gray-600 dark:text-gray-300">{project.learnings}</p>
+                    </div>
+                  )}
+                  {project.futureImprovements && (
+                    <div>
+                      <h4 className="font-medium mb-2 text-dicey-magenta">Future Improvements</h4>
+                      <p className="text-sm text-gray-600 dark:text-gray-300">{project.futureImprovements}</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Collaborators */}
+            {project.collaborators && project.collaborators.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Collaborators</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {project.collaborators.map((email, index) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-dicey-magenta rounded-full"></div>
+                        <span className="text-sm text-gray-600 dark:text-gray-300">{email}</span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           {/* Sidebar */}
           <div className="space-y-6">
-            {/* Organizer */}
+            {/* Project Links */}
             <Card>
               <CardHeader>
-                <CardTitle>Organized by</CardTitle>
+                <CardTitle>Links</CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-3">
-                  <Avatar>
-                    <AvatarImage src={project.organizer.avatar} />
-                    <AvatarFallback className="bg-dicey-azure text-white">HT</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="font-medium">{project.organizer.name}</p>
-                    <p className="text-sm text-gray-500">Verified Organizer</p>
+              <CardContent className="space-y-2">
+                {project.githubUrl && (
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-start"
+                    onClick={() => window.open(project.githubUrl, '_blank')}
+                  >
+                    <GitBranch className="h-4 w-4 mr-2" />
+                    GitHub Repository
+                  </Button>
+                )}
+                {project.demoUrl && (
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-start"
+                    onClick={() => window.open(project.demoUrl, '_blank')}
+                  >
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    Live Demo
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Skills */}
+            {project.skills && project.skills.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Skills</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-wrap gap-2">
+                    {project.skills.map((skill, index) => (
+                      <Badge key={index} variant="secondary">
+                        {skill}
+                      </Badge>
+                    ))}
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Mentors */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Mentors</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {project.mentors.map((mentor, index) => (
-                    <div key={index} className="flex items-center gap-3">
-                      <Avatar>
-                        <AvatarImage src={mentor.avatar} />
-                        <AvatarFallback className="bg-dicey-magenta text-white">{mentor.name[0]}</AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="font-medium text-sm">{mentor.name}</p>
-                        <p className="text-xs text-gray-500">{mentor.role}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Action Button */}
-            <Card>
-              <CardContent className="pt-6">
-                <Button 
-                  className={`w-full text-white ${
-                    hasJoined 
-                      ? 'bg-dicey-yellow text-dicey-dark-pink hover:bg-dicey-yellow/90' 
-                      : 'bg-dicey-magenta hover:bg-dicey-magenta/90'
-                  }`}
-                  size="lg"
-                  onClick={handleJoinProject}
-                  disabled={hasJoined}
-                >
-                  {hasJoined ? 'Joined Successfully!' : 'Join Project'}
-                </Button>
-                <p className="text-xs text-gray-500 mt-2 text-center">
-                  By joining, you agree to the project terms and conditions
-                </p>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
       </div>

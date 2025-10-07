@@ -20,6 +20,7 @@ import {
   Bookmark
 } from "lucide-react";
 import { getAllHackathons, getUserSavedHackathonIds, toggleSaveHackathon, hasUserAppliedToHackathon, createApplication } from '@/services/firestoreService';
+import { sendApplicationConfirmation } from '@/services/emailService';
 import { Hackathon } from '@/types/firestore';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -137,11 +138,19 @@ const Hackathons = () => {
         applicationData: {}
       });
       
+      // Send confirmation email
+      sendApplicationConfirmation(
+        user.email!,
+        user.displayName || 'Participant',
+        hackathon.title,
+        'Quick Apply'
+      );
+      
       setAppliedIds(prev => new Set(prev).add(hackathon.id));
       
       toast({
         title: "Application Submitted",
-        description: `Your application to ${hackathon.title} has been submitted successfully.`,
+        description: `Your application to ${hackathon.title} has been submitted. Check your email for confirmation.`,
       });
     } catch (error) {
       console.error('Error applying to hackathon:', error);
@@ -213,11 +222,6 @@ const Hackathons = () => {
                   <SelectItem value="completed">Completed</SelectItem>
                 </SelectContent>
               </Select>
-
-              <Button variant="outline" className="w-full">
-                <Filter className="mr-2 h-4 w-4" />
-                More Filters
-              </Button>
             </div>
           </CardContent>
         </Card>

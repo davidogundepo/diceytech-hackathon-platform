@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { useAuth } from '@/contexts/AuthContext';
 import { getHackathonById, createApplication, toggleSaveHackathon, getUserSavedHackathonIds } from '@/services/firestoreService';
+import { sendApplicationConfirmation } from '@/services/emailService';
 import { Hackathon } from '@/types/firestore';
 import { useToast } from '@/hooks/use-toast';
 
@@ -96,9 +97,17 @@ const HackathonDetails = () => {
         applicationData: formData
       });
 
+      // Send confirmation email
+      sendApplicationConfirmation(
+        user.email!,
+        user.displayName || 'Participant',
+        hackathon?.title || 'Hackathon',
+        formData.teamName
+      );
+
       toast({
         title: "Application submitted!",
-        description: "Your hackathon application has been submitted successfully."
+        description: "Check your email for confirmation. We'll notify you if accepted."
       });
 
       setShowApplyForm(false);
@@ -189,7 +198,31 @@ const HackathonDetails = () => {
                     <Button variant="ghost" size="icon" onClick={handleSave}>
                       <Heart className={`h-5 w-5 ${isSaved ? 'fill-red-500 text-red-500' : ''}`} />
                     </Button>
-                    <Button variant="ghost" size="icon">
+                    <Button variant="ghost" size="icon" onClick={async () => {
+                      const url = window.location.href;
+                      if (navigator.share) {
+                        try {
+                          await navigator.share({
+                            title: hackathon.title,
+                            text: hackathon.description,
+                            url: url
+                          });
+                          toast({ title: "Shared successfully!" });
+                        } catch (err) {
+                          if ((err as Error).name !== 'AbortError') {
+                            console.error('Share failed:', err);
+                          }
+                        }
+                      } else {
+                        try {
+                          await navigator.clipboard.writeText(url);
+                          toast({ title: "Link copied!", description: "Hackathon link copied to clipboard" });
+                        } catch (err) {
+                          console.error('Copy failed:', err);
+                          toast({ title: "Failed to copy", variant: "destructive" });
+                        }
+                      }
+                    }}>
                       <Share2 className="h-5 w-5" />
                     </Button>
                   </div>

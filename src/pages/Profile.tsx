@@ -15,7 +15,7 @@ import {
   Globe,
   Github,
   Linkedin,
-  Twitter
+  X as XIcon
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
@@ -28,6 +28,8 @@ const Profile = () => {
   const { user } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [profileData, setProfileData] = useState({
     name: '',
     email: '',
@@ -41,7 +43,8 @@ const Profile = () => {
     skills: [] as string[],
     goal: '',
     experience: [] as WorkExperience[],
-    education: [] as Education[]
+    education: [] as Education[],
+    photoURL: ''
   });
 
   // Load user data from Firestore
@@ -67,7 +70,8 @@ const Profile = () => {
               skills: userData.skills || [],
               goal: userData.goal || '',
               experience: userData.experience || [],
-              education: userData.education || []
+              education: userData.education || [],
+              photoURL: userData.photoURL || ''
             });
           }
         } catch (error) {
@@ -83,6 +87,67 @@ const Profile = () => {
 
   const handleInputChange = (field: string, value: string) => {
     setProfileData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Invalid file type",
+        description: "Please upload an image file",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Validate file size (5MB max)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Please upload an image smaller than 5MB",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const { uploadUserAvatar } = await import('@/services/storageService');
+      const { updateUser } = await import('@/services/firestoreService');
+      
+      // Upload to Firebase Storage
+      const photoURL = await uploadUserAvatar(file, user.id);
+      
+      // Update Firestore
+      await updateUser(user.id, { photoURL });
+      
+      // Update local state
+      setProfileData(prev => ({ ...prev, photoURL }));
+      
+      toast({
+        title: "Profile picture updated ✅",
+        description: "Your avatar has been successfully uploaded",
+      });
+
+      // Reload to sync with auth context
+      setTimeout(() => window.location.reload(), 1000);
+    } catch (error) {
+      console.error('Avatar upload error:', error);
+      toast({
+        title: "Upload failed",
+        description: "Failed to upload profile picture. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleSave = async () => {
@@ -172,15 +237,15 @@ const Profile = () => {
           <div className="flex gap-2">
             {isEditing ? (
               <>
-                <Button variant="outline" onClick={() => setIsEditing(false)} disabled={loading}>
+                <Button variant="outline" onClick={() => setIsEditing(false)} disabled={loading} className="border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-800">
                   Cancel
                 </Button>
-                <Button onClick={handleSave} className="bg-dicey-teal hover:bg-dicey-teal/90" disabled={loading}>
+                <Button onClick={handleSave}   className="bg-dicey-teal hover:bg-dicey-teal/90 text-black dark:text-white border border-black dark:border-white rounded-md" disabled={loading}>
                   {loading ? 'Saving...' : 'Save Changes'}
                 </Button>
               </>
             ) : (
-              <Button onClick={() => setIsEditing(true)} className="bg-dicey-azure hover:bg-dicey-azure/90">
+              <Button onClick={() => setIsEditing(true)} className="bg-dicey-azure hover:bg-dicey-azure/90 text-white">
                 <Edit className="mr-2 h-4 w-4" />
                 Edit Profile
               </Button>
@@ -218,19 +283,34 @@ const Profile = () => {
                 <div className="flex items-center gap-6">
                   <div className="relative">
                     <Avatar className="h-20 w-20">
-                      <AvatarImage src={user?.photoURL || undefined} />
+                      <AvatarImage src={profileData.photoURL || user?.photoURL || undefined} />
                       <AvatarFallback className="bg-dicey-azure text-white text-2xl">
                         {profileData.name ? profileData.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'U'}
                       </AvatarFallback>
                     </Avatar>
                     {isEditing && (
-                      <Button 
-                        size="icon" 
-                        variant="outline" 
-                        className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full"
-                      >
-                        <Camera className="h-4 w-4" />
-                      </Button>
+                      <>
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="image/*"
+                          onChange={handleAvatarUpload}
+                          className="hidden"
+                        />
+                        <Button 
+                          size="icon" 
+                          variant="outline" 
+                          className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full bg-white dark:bg-gray-800"
+                          onClick={handleAvatarClick}
+                          disabled={uploading}
+                        >
+                          {uploading ? (
+                            <div className="h-4 w-4 border-2 border-dicey-azure border-t-transparent rounded-full animate-spin" />
+                          ) : (
+                            <Camera className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </>
                     )}
                   </div>
                   <div className="flex-1">
@@ -390,12 +470,12 @@ const Profile = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-1 flex items-center gap-2 text-gray-700 dark:text-gray-300">
-                      <Twitter className="h-4 w-4" />
-                      Twitter
+                      <XIcon className="h-4 w-4" />
+                      X (Twitter)
                     </label>
                     {isEditing ? (
                       <Input
-                        placeholder="https://twitter.com/username"
+                        placeholder="https://x.com/username"
                         value={profileData.twitter}
                         onChange={(e) => handleInputChange('twitter', e.target.value)}
                       />
