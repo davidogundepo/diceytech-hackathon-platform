@@ -1,0 +1,7 @@
+project_id = "default"
+
+[functions.send-welcome-email]
+verify_jwt = false
+
+[functions.send-application-confirmation]
+verify_jwt = false
