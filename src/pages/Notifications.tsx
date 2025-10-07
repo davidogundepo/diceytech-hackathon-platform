@@ -21,26 +21,36 @@ import {
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from '@/contexts/AuthContext';
-import { subscribeToUserNotifications, markNotificationAsRead } from '@/services/firestoreService';
+import { subscribeToAllNotifications, markNotificationAsRead } from '@/services/firestoreService';
 import { Notification } from '@/types/firestore';
 
 const Notifications = () => {
-  const { user } = useAuth();
+  const { user, firebaseUser } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [selectedTab, setSelectedTab] = useState('all');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) return;
-
+    console.log('🔔 Subscribing to all notifications (global feed)');
     setLoading(true);
-    const unsubscribe = subscribeToUserNotifications(user.id, (notifs) => {
+    const unsubscribe = subscribeToAllNotifications((notifs) => {
+      console.log('🔔 Received', notifs.length, 'notifications');
+      if (notifs.length === 0) {
+        console.log('💡 No notifications found in database');
+      } else {
+        console.log('✅ Notifications loaded:', notifs.map(n => ({ 
+          id: n.id, 
+          title: n.title, 
+          type: n.type,
+          userId: n.userId 
+        })));
+      }
       setNotifications(notifs);
       setLoading(false);
     });
 
     return () => unsubscribe();
-  }, [user]);
+  }, []);
 
   const getIcon = (type: string) => {
     switch (type) {
@@ -52,12 +62,16 @@ const Notifications = () => {
         return <Star className="h-5 w-5 text-dicey-yellow" />;
       case 'project':
         return <Users className="h-5 w-5 text-blue-500" />;
+      case 'system':
+        return <Settings className="h-5 w-5 text-dicey-azure" />;
       default:
         return <Bell className="h-5 w-5 text-gray-500" />;
     }
   };
 
   const handleMarkAsRead = async (id: string) => {
+    // Optimistic update
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
     try {
       await markNotificationAsRead(id);
     } catch (error) {
@@ -68,6 +82,8 @@ const Notifications = () => {
   const markAllAsRead = async () => {
     try {
       const unreadNotifs = notifications.filter(n => !n.isRead);
+      // Optimistic update
+      setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
       await Promise.all(unreadNotifs.map(n => markNotificationAsRead(n.id)));
     } catch (error) {
       console.error('Error marking all as read:', error);
@@ -81,7 +97,7 @@ const Notifications = () => {
   const filteredNotifications = notifications.filter(notif => {
     if (selectedTab === 'all') return true;
     if (selectedTab === 'unread') return !notif.isRead;
-    return notif.category.toLowerCase() === selectedTab;
+    return notif.type === selectedTab;
   });
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
@@ -126,10 +142,10 @@ const Notifications = () => {
               <TabsList className="grid w-full grid-cols-6">
                 <TabsTrigger value="all">All</TabsTrigger>
                 <TabsTrigger value="unread">Unread</TabsTrigger>
-                <TabsTrigger value="hackathons">Hackathons</TabsTrigger>
-                <TabsTrigger value="jobs">Jobs</TabsTrigger>
-                <TabsTrigger value="projects">Projects</TabsTrigger>
-                <TabsTrigger value="achievements">Achievements</TabsTrigger>
+                <TabsTrigger value="hackathon">Hackathons</TabsTrigger>
+                <TabsTrigger value="application">Jobs</TabsTrigger>
+                <TabsTrigger value="project">Projects</TabsTrigger>
+                <TabsTrigger value="achievement">Achievements</TabsTrigger>
               </TabsList>
 
               <TabsContent value={selectedTab} className="mt-6">
@@ -168,8 +184,8 @@ const Notifications = () => {
                                   <span className="text-sm text-gray-500 dark:text-gray-400">
                                     {notification.createdAt.toDate().toLocaleDateString()}
                                   </span>
-                                  <Badge variant="outline" className="text-xs">
-                                    {notification.category}
+                                 <Badge variant="outline" className="text-xs">
+                                    {notification.type}
                                   </Badge>
                                 </div>
                               </div>

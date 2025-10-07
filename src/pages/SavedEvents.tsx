@@ -184,4 +184,4 @@ const SavedEvents = () => {
   );
 };
 
-export default SavedEvents; 
+export default SavedEvents;

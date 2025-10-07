@@ -31,71 +31,70 @@ const MyPortfolio = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [projects, setProjects] = React.useState<any[]>([]);
+  const [applications, setApplications] = React.useState<any[]>([]);
+  const [achievements, setAchievements] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
 
   React.useEffect(() => {
-    const fetchProjects = async () => {
+    const fetchPortfolioData = async () => {
       if (user) {
         setLoading(true);
         try {
-          const { getUserProjects } = await import('@/services/firestoreService');
+          const { getUserProjects, getUserApplications, getUserAchievements, getAllAchievements } = await import('@/services/firestoreService');
+          
+          // Fetch user's projects
           const userProjects = await getUserProjects(user.id);
+          console.log('📁 Loaded projects:', userProjects.length);
           setProjects(userProjects);
+          
+          // Fetch user's applications
+          const userApplications = await getUserApplications(user.id);
+          console.log('📋 Loaded applications:', userApplications.length);
+          setApplications(userApplications);
+          
+          // Fetch user's achievements
+          const userAchievements = await getUserAchievements(user.id);
+          const allAchievements = await getAllAchievements();
+          
+          // Match user achievements with achievement details
+          const enrichedAchievements = userAchievements.map(ua => {
+            const achievement = allAchievements.find(a => a.id === ua.achievementId);
+            return {
+              ...ua,
+              ...achievement
+            };
+          }).filter(a => a.title); // Only include achievements with details
+          
+          console.log('🏆 Loaded achievements:', enrichedAchievements.length);
+          setAchievements(enrichedAchievements);
         } catch (error) {
-          console.error('Error fetching projects:', error);
+          console.error('Error fetching portfolio data:', error);
         } finally {
           setLoading(false);
         }
       }
     };
 
-    fetchProjects();
+    fetchPortfolioData();
   }, [user]);
 
   const portfolioStats = {
     totalProjects: projects.length,
-    completedHackathons: 5, // TODO: Fetch from applications
-    totalAwards: 3, // TODO: Fetch from achievements
-    profileViews: 247 // TODO: Add view tracking
+    completedHackathons: applications.length,
+    totalAwards: achievements.length,
+    profileViews: user?.profileViews || 0
   };
 
-  const skillsData = [
-    { skill: 'Python', level: 90 },
-    { skill: 'Data Analysis', level: 85 },
-    { skill: 'Machine Learning', level: 80 },
-    { skill: 'SQL', level: 88 },
-    { skill: 'React', level: 75 },
-    { skill: 'Django', level: 70 },
-    { skill: 'AWS', level: 68 },
-    { skill: 'JavaScript', level: 82 }
-  ];
-
-  const achievements = [
-    {
-      title: '1st Place - AgriConnect Summit Hackathon',
-      date: 'May 2025',
-      organization: 'DataFestAfrica',
-      prize: '$5000',
-      icon: Trophy,
-      color: 'text-yellow-600'
-    },
-    {
-      title: '2nd Place - DataFest Africa 2024',
-      date: 'Oct 2024',
-      organization: 'DataFestAfrica',
-      prize: '$2000',
-      icon: Award,
-      color: 'text-silver-600'
-    },
-    {
-      title: 'Best Innovation Award',
-      date: 'Sep 2023',
-      organization: 'Target Tuition',
-      prize: '$1000',
-      icon: Star,
-      color: 'text-bronze-600'
-    }
-  ];
+  // Generate skills data from user's profile
+  const skillsData = React.useMemo(() => {
+    if (!user?.skills || user.skills.length === 0) return [];
+    
+    // Create skill level data from user's skills
+    return user.skills.slice(0, 8).map(skill => ({
+      skill,
+      level: 75 + Math.random() * 25 // Random level between 75-100 for visualization
+    }));
+  }, [user?.skills]);
 
   const chartConfig = {
     level: {
@@ -204,19 +203,27 @@ const MyPortfolio = () => {
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div className="flex items-center justify-between">
                   <span>Basic Information</span>
-                  <Badge variant="default">Complete</Badge>
+                  <Badge variant={user?.displayName && user?.bio ? "default" : "secondary"}>
+                    {user?.displayName && user?.bio ? "Complete" : "Incomplete"}
+                  </Badge>
                 </div>
                 <div className="flex items-center justify-between">
                   <span>Skills & Technologies</span>
-                  <Badge variant="default">Complete</Badge>
+                  <Badge variant={user?.skills && user.skills.length > 0 ? "default" : "secondary"}>
+                    {user?.skills && user.skills.length > 0 ? "Complete" : "Incomplete"}
+                  </Badge>
                 </div>
                 <div className="flex items-center justify-between">
                   <span>Work Experience</span>
-                  <Badge variant="secondary">Incomplete</Badge>
+                  <Badge variant={user?.experience && user.experience.length > 0 ? "default" : "secondary"}>
+                    {user?.experience && user.experience.length > 0 ? "Complete" : "Incomplete"}
+                  </Badge>
                 </div>
                 <div className="flex items-center justify-between">
                   <span>Education</span>
-                  <Badge variant="secondary">Incomplete</Badge>
+                  <Badge variant={user?.education && user.education.length > 0 ? "default" : "secondary"}>
+                    {user?.education && user.education.length > 0 ? "Complete" : "Incomplete"}
+                  </Badge>
                 </div>
               </div>
               
@@ -338,70 +345,70 @@ const MyPortfolio = () => {
         </section>
 
         {/* Skills Section */}
-        <section className="space-y-6">
-          <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">Skills</h2>
-          
-          <Card>
-            <CardHeader>
-              <CardTitle>Technical Skills Overview</CardTitle>
-              <CardDescription>Visual representation of skill proficiency levels</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ChartContainer config={chartConfig} className="mx-auto aspect-square max-h-[400px]">
-                <RadarChart data={skillsData}>
-                  <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
-                  <PolarGrid />
-                  <PolarAngleAxis dataKey="skill" />
-                  <PolarRadiusAxis domain={[0, 100]} tick={false} />
-                  <Radar
-                    dataKey="level"
-                    stroke="#428b9f"
-                    fill="#428b9f"
-                    fillOpacity={0.3}
-                    strokeWidth={2}
-                  />
-                </RadarChart>
-              </ChartContainer>
-            </CardContent>
-          </Card>
-        </section>
+        {skillsData.length > 0 && (
+          <section className="space-y-6">
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">Skills</h2>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Technical Skills Overview</CardTitle>
+                <CardDescription>Visual representation of skill proficiency levels</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ChartContainer config={chartConfig} className="mx-auto aspect-square max-h-[400px]">
+                  <RadarChart data={skillsData}>
+                    <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
+                    <PolarGrid />
+                    <PolarAngleAxis dataKey="skill" />
+                    <PolarRadiusAxis domain={[0, 100]} tick={false} />
+                    <Radar
+                      dataKey="level"
+                      stroke="#428b9f"
+                      fill="#428b9f"
+                      fillOpacity={0.3}
+                      strokeWidth={2}
+                    />
+                  </RadarChart>
+                </ChartContainer>
+              </CardContent>
+            </Card>
+          </section>
+        )}
 
         {/* Achievements Section */}
-        <section className="space-y-6">
-          <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">Achievements</h2>
-          
-          <div className="space-y-4">
-            {achievements.map((achievement, index) => (
-              <Card key={index}>
-                <CardContent className="p-6">
-                  <div className="flex items-start gap-4">
-                    <div className={`p-3 rounded-full bg-gray-100 dark:bg-gray-800 ${achievement.color}`}>
-                      <achievement.icon className="h-6 w-6" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                        {achievement.title}
-                      </h3>
-                      <p className="text-dicey-azure font-medium mb-1">
-                        {achievement.organization}
-                      </p>
-                      <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-300">
-                        <span className="flex items-center gap-1">
-                          <Calendar className="h-4 w-4" />
-                          {achievement.date}
-                        </span>
-                        <span className="flex items-center gap-1 text-dicey-yellow font-semibold">
-                          <Award className="h-4 w-4" />
-                          {achievement.prize}
-                        </span>
+        {achievements.length > 0 && (
+          <section className="space-y-6">
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">Achievements</h2>
+            
+            <div className="space-y-4">
+              {achievements.map((achievement, index) => (
+                <Card key={index}>
+                  <CardContent className="p-6">
+                    <div className="flex items-start gap-4">
+                      <div className="p-3 rounded-full bg-dicey-azure/10 text-dicey-azure">
+                        <Trophy className="h-6 w-6" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                          {achievement.title}
+                        </h3>
+                        <p className="text-gray-600 dark:text-gray-300 mb-2">
+                          {achievement.description}
+                        </p>
+                        <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
+                          <span className="flex items-center gap-1">
+                            <Calendar className="h-4 w-4" />
+                            {achievement.earnedAt?.toDate().toLocaleDateString()}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </section>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </section>
+        )}
       </div>
     </DashboardLayout>
   );

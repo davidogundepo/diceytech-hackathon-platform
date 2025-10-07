@@ -23,6 +23,7 @@ export interface User {
   photoURL?: string;
   role: 'user' | 'admin';
   profileCompleteness: number;
+  profileViews?: number;
   bio?: string;
   location?: string;
   phone?: string;
@@ -43,17 +44,20 @@ export interface Project {
   userId: string;
   title: string;
   description: string;
+  overview?: string;
   category: string;
   difficulty?: string;
   imageUrl?: string;
   demoUrl?: string;
   githubUrl?: string;
+  videoUrl?: string;
   techStack: string[];
   skills: string[];
   collaborators: string[];
   challenges?: string;
   learnings?: string;
   futureImprovements?: string;
+  outcomes?: string;
   status?: string;
   views: number;
   likes: number;

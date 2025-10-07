@@ -67,28 +67,31 @@ export const updateUser = async (userId: string, userData: Partial<User>): Promi
 
 // Project Operations
 export const getAllProjects = async (): Promise<Project[]> => {
+  // Fetch all published projects without orderBy to avoid composite index requirement
   const q = query(
     collection(db, 'projects'), 
-    where('status', '==', 'published'),
-    orderBy('createdAt', 'desc')
+    where('status', '==', 'published')
   );
   const querySnapshot = await getDocs(q);
-  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Project));
+  const projects = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Project));
+  
+  // Sort client-side to avoid composite index requirement
+  return projects.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
 };
 
 export const getUserProjects = async (userId: string, limitCount?: number): Promise<Project[]> => {
-  let q = query(
+  const q = query(
     collection(db, 'projects'),
-    where('userId', '==', userId),
-    orderBy('createdAt', 'desc')
+    where('userId', '==', userId)
   );
   
-  if (limitCount) {
-    q = query(q, limit(limitCount));
-  }
-  
   const querySnapshot = await getDocs(q);
-  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Project));
+  const projects = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Project));
+  
+  // Sort client-side to avoid composite index requirement
+  const sortedProjects = projects.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+  
+  return limitCount ? sortedProjects.slice(0, limitCount) : sortedProjects;
 };
 
 export const getProjectById = async (projectId: string): Promise<Project | null> => {
@@ -124,24 +127,26 @@ export const deleteProject = async (projectId: string): Promise<void> => {
 
 // Hackathon Operations
 export const getAllHackathons = async (): Promise<Hackathon[]> => {
+  // Fetch all hackathons and sort client-side to avoid composite index requirements
   const q = query(
-    collection(db, 'hackathons'),
-    where('isActive', '==', true),
-    orderBy('startDate', 'desc')
+    collection(db, 'hackathons')
   );
   const querySnapshot = await getDocs(q);
-  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Hackathon));
+  const items = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Hackathon));
+  // Sort client-side by startDate desc
+  return items.sort((a, b) => (b.startDate?.seconds || 0) - (a.startDate?.seconds || 0));
 };
 
 export const getRecentHackathons = async (limitCount: number): Promise<Hackathon[]> => {
   const q = query(
     collection(db, 'hackathons'),
-    where('isActive', '==', true),
-    orderBy('startDate', 'desc'),
-    limit(limitCount)
+    where('isActive', '==', true)
   );
   const querySnapshot = await getDocs(q);
-  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Hackathon));
+  const items = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Hackathon));
+  return items
+    .sort((a, b) => (b.startDate?.seconds || 0) - (a.startDate?.seconds || 0))
+    .slice(0, limitCount);
 };
 
 export const getHackathonById = async (hackathonId: string): Promise<Hackathon | null> => {
@@ -163,15 +168,48 @@ export const createHackathon = async (hackathonData: Omit<Hackathon, 'id' | 'par
   return docRef.id;
 };
 
+// Saved Hackathons (Favorites)
+export const toggleSaveHackathon = async (userId: string, hackathonId: string): Promise<boolean> => {
+  const favRef = doc(db, 'user_saved_hackathons', `${userId}_${hackathonId}`);
+  const snap = await getDoc(favRef);
+  if (snap.exists()) {
+    await deleteDoc(favRef);
+    return false; // now unsaved
+  }
+  await setDoc(favRef, { userId, hackathonId, createdAt: Timestamp.now() });
+  return true; // now saved
+};
+
+export const getUserSavedHackathonIds = async (userId: string): Promise<string[]> => {
+  const q = query(collection(db, 'user_saved_hackathons'), where('userId', '==', userId));
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(d => (d.data() as any).hackathonId as string);
+};
+
+export const getUserSavedHackathons = async (userId: string): Promise<Hackathon[]> => {
+  const ids = await getUserSavedHackathonIds(userId);
+  const docs = await Promise.all(ids.map(id => getDoc(doc(db, 'hackathons', id))));
+  return docs
+    .filter(s => s.exists())
+    .map(s => ({ id: s.id, ...s.data() } as Hackathon))
+    .sort((a, b) => (b.startDate?.seconds || 0) - (a.startDate?.seconds || 0));
+};
+
 // Application Operations
 export const getUserApplications = async (userId: string): Promise<Application[]> => {
+  console.log('🔍 getUserApplications called with userId:', userId);
   const q = query(
     collection(db, 'applications'),
-    where('userId', '==', userId),
-    orderBy('createdAt', 'desc')
+    where('userId', '==', userId)
   );
   const querySnapshot = await getDocs(q);
-  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Application));
+  console.log('🔍 Query returned', querySnapshot.docs.length, 'documents');
+  querySnapshot.docs.forEach(doc => {
+    console.log('🔍 Application doc:', doc.id, doc.data());
+  });
+  const applications = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Application));
+  // Sort client-side to avoid composite index requirement
+  return applications.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
 };
 
 export const createApplication = async (applicationData: Omit<Application, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> => {
@@ -188,11 +226,11 @@ export const createApplication = async (applicationData: Omit<Application, 'id' 
 export const getUserNotifications = async (userId: string): Promise<Notification[]> => {
   const q = query(
     collection(db, 'notifications'),
-    where('userId', '==', userId),
-    orderBy('createdAt', 'desc')
+    where('userId', '==', userId)
   );
   const querySnapshot = await getDocs(q);
-  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notification));
+  const items = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notification));
+  return items.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
 };
 
 export const subscribeToUserNotifications = (
@@ -201,17 +239,42 @@ export const subscribeToUserNotifications = (
 ): (() => void) => {
   const q = query(
     collection(db, 'notifications'),
-    where('userId', '==', userId),
-    orderBy('createdAt', 'desc')
+    where('userId', '==', userId)
   );
   
-  return onSnapshot(q, (querySnapshot) => {
-    const notifications = querySnapshot.docs.map(doc => ({ 
-      id: doc.id, 
-      ...doc.data() 
-    } as Notification));
-    callback(notifications);
-  });
+  return onSnapshot(
+    q,
+    (querySnapshot) => {
+      const notifications = querySnapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() } as Notification))
+        .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+      callback(notifications);
+    },
+    (error) => {
+      console.error('subscribeToUserNotifications error:', error);
+      callback([]);
+    }
+  );
+};
+
+export const subscribeToAllNotifications = (
+  callback: (notifications: Notification[]) => void
+): (() => void) => {
+  const q = query(collection(db, 'notifications'));
+  
+  return onSnapshot(
+    q,
+    (querySnapshot) => {
+      const notifications = querySnapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() } as Notification))
+        .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+      callback(notifications);
+    },
+    (error) => {
+      console.error('subscribeToAllNotifications error:', error);
+      callback([]);
+    }
+  );
 };
 
 export const markNotificationAsRead = async (notificationId: string): Promise<void> => {

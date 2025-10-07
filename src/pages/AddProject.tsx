@@ -118,7 +118,7 @@ const AddProject = () => {
     });
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!projectData.title.trim() || !projectData.description.trim()) {
       toast({
         title: "Missing required fields",
@@ -128,11 +128,69 @@ const AddProject = () => {
       return;
     }
 
-    toast({
-      title: "Project submitted successfully!",
-      description: "Your project has been added to your portfolio.",
-    });
-    navigate('/my-portfolio');
+    try {
+      const { createProject } = await import('@/services/firestoreService');
+      const { uploadProjectImage } = await import('@/services/storageService');
+      const { useAuth } = await import('@/contexts/AuthContext');
+      
+      // Get user from window global (set by AuthContext)
+      const currentUser = (window as any).__currentUser;
+      if (!currentUser) {
+        toast({
+          title: "Error",
+          description: "You must be logged in to add a project.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      let imageUrl = '';
+      
+      // Upload image if provided
+      if (projectData.image) {
+        try {
+          imageUrl = await uploadProjectImage(projectData.image, currentUser.id);
+        } catch (error) {
+          console.error('Error uploading image:', error);
+          toast({
+            title: "Warning",
+            description: "Failed to upload image, but project will be created without it.",
+          });
+        }
+      }
+
+      // Create project in Firestore
+      await createProject({
+        userId: currentUser.id,
+        title: projectData.title,
+        description: projectData.description,
+        overview: projectData.overview,
+        techStack: projectData.techStack,
+        githubUrl: projectData.githubUrl,
+        demoUrl: projectData.demoUrl,
+        videoUrl: projectData.videoUrl,
+        category: projectData.category,
+        difficulty: projectData.difficulty,
+        outcomes: projectData.outcomes,
+        skills: projectData.skills,
+        collaborators: projectData.collaborators,
+        imageUrl: imageUrl || 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=800',
+        status: 'published'
+      });
+
+      toast({
+        title: "Project submitted successfully!",
+        description: "Your project has been added to your portfolio.",
+      });
+      navigate('/my-portfolio');
+    } catch (error) {
+      console.error('Error creating project:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create project. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   const progressPercentage = () => {

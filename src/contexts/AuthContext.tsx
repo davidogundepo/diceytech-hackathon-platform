@@ -139,6 +139,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsAuthenticated(false);
   };
 
+  // Store current user globally for AddProject to access
+  useEffect(() => {
+    (window as any).__currentUser = user;
+  }, [user]);
+
   return (
     <AuthContext.Provider value={{ 
       user, 

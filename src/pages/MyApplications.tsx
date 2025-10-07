@@ -17,25 +17,62 @@ import {
   XCircle
 } from "lucide-react";
 import { useAuth } from '@/contexts/AuthContext';
-import { getUserApplications } from '@/services/firestoreService';
-import { Application } from '@/types/firestore';
+import { getUserApplications, getHackathonById } from '@/services/firestoreService';
+import { Application, Hackathon } from '@/types/firestore';
 
 const MyApplications = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('all');
   const [applications, setApplications] = useState<Application[]>([]);
+  const [hackathons, setHackathons] = useState<Record<string, Hackathon>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchApplications = async () => {
-      if (!user) return;
+      if (!user) {
+        console.log('❌ No user logged in, cannot load applications');
+        setLoading(false);
+        return;
+      }
       
+      console.log('📋 Fetching applications for user:', user.id);
+      console.log('📋 Full user object:', user);
+      console.log('📋 User email:', user.email);
       setLoading(true);
       try {
         const userApps = await getUserApplications(user.id);
+        console.log('✅ Loaded', userApps.length, 'applications:', userApps);
+        console.log('✅ Raw applications data:', JSON.stringify(userApps, null, 2));
+        
+        if (userApps.length === 0) {
+          console.log('💡 No applications found for user:', user.id);
+        } else {
+          // Fetch hackathon details for all hackathon applications
+          const hackathonIds = userApps
+            .filter(app => app.type === 'hackathon' && app.hackathonId)
+            .map(app => app.hackathonId!);
+          
+          console.log('🎯 Fetching details for hackathons:', hackathonIds);
+          
+          const hackathonData: Record<string, Hackathon> = {};
+          for (const id of hackathonIds) {
+            try {
+              const hackathon = await getHackathonById(id);
+              if (hackathon) {
+                hackathonData[id] = hackathon;
+              }
+            } catch (err) {
+              console.error('Error fetching hackathon', id, err);
+            }
+          }
+          
+          console.log('✅ Loaded hackathon details:', hackathonData);
+          setHackathons(hackathonData);
+        }
+        
         setApplications(userApps);
       } catch (error) {
-        console.error('Error fetching applications:', error);
+        console.error('❌ Error fetching applications:', error);
       } finally {
         setLoading(false);
       }
@@ -76,6 +113,24 @@ const MyApplications = () => {
     accepted: applications.filter(app => app.status === 'accepted').length,
     rejected: applications.filter(app => app.status === 'rejected').length
   };
+
+  if (!user) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <FileText className="h-12 w-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+              Please log in
+            </h3>
+            <p className="text-gray-600 dark:text-gray-300">
+              You need to be logged in to view your applications.
+            </p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   if (loading) {
     return (
@@ -180,6 +235,9 @@ const MyApplications = () => {
                     const StatusIcon = getStatusIcon(application.status);
                     const statusColor = getStatusColor(application.status);
                     
+                    // Get hackathon details if it's a hackathon application
+                    const hackathon = application.hackathonId ? hackathons[application.hackathonId] : null;
+                    
                     return (
                       <Card key={application.id} className="transition-all hover:shadow-md">
                         <CardContent className="p-6">
@@ -191,11 +249,18 @@ const MyApplications = () => {
                                 </div>
                                 <div>
                                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                                    {application.type === 'job' ? 'Job Application' : 'Hackathon Application'}
+                                    {hackathon?.title || (application.type === 'job' ? 'Job Application' : 'Hackathon Application')}
                                   </h3>
-                                  <p className="text-dicey-teal font-medium">
-                                    {application.type === 'job' ? `Job ID: ${application.jobId}` : `Hackathon ID: ${application.hackathonId}`}
-                                  </p>
+                                  {hackathon && (
+                                    <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
+                                      {hackathon.description}
+                                    </p>
+                                  )}
+                                  {application.applicationData?.teamName && (
+                                    <p className="text-dicey-teal font-medium mt-1">
+                                      Team: {application.applicationData.teamName}
+                                    </p>
+                                  )}
                                 </div>
                               </div>
                             </div>
@@ -216,13 +281,36 @@ const MyApplications = () => {
                               <Clock className="h-4 w-4" />
                               <span>Updated {application.updatedAt.toDate().toLocaleDateString()}</span>
                             </div>
+                            {hackathon && (
+                              <div className="flex items-center gap-2">
+                                <MapPin className="h-4 w-4" />
+                                <span>{hackathon.location || 'Online'}</span>
+                              </div>
+                            )}
                           </div>
                           
+                          {application.applicationData && (
+                            <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg space-y-2 text-sm">
+                              {application.applicationData.teamSize && (
+                                <p><strong>Team Size:</strong> {application.applicationData.teamSize}</p>
+                              )}
+                              {application.applicationData.projectIdea && (
+                                <p><strong>Project Idea:</strong> {application.applicationData.projectIdea}</p>
+                              )}
+                            </div>
+                          )}
+                          
                           <div className="flex gap-2">
-                            <Button variant="outline" size="sm">
-                              <Eye className="mr-1 h-3 w-3" />
-                              View Details
-                            </Button>
+                            {application.hackathonId && (
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => window.location.href = `/hackathons/${application.hackathonId}`}
+                              >
+                                <Eye className="mr-1 h-3 w-3" />
+                                View Details
+                              </Button>
+                            )}
                           </div>
                         </CardContent>
                       </Card>
