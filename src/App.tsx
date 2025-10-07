@@ -17,8 +17,10 @@ import AddProject from "./pages/AddProject";
 import ProjectDetails from "./pages/ProjectDetails";
 import Profile from "./pages/Profile";
 import Hackathons from "./pages/Hackathons";
+import HackathonDetails from "./pages/HackathonDetails";
 import Notifications from "./pages/Notifications";
 import Achievements from "./pages/Achievements";
+import SavedEvents from "./pages/SavedEvents";
 import AdminSeed from "./pages/AdminSeed";
 import NotFound from "./pages/NotFound";
 
@@ -43,8 +45,10 @@ const App = () => (
               <Route path="/project/:id" element={<ProtectedRoute><ProjectDetails /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
               <Route path="/hackathons" element={<ProtectedRoute><Hackathons /></ProtectedRoute>} />
+              <Route path="/hackathon/:id" element={<ProtectedRoute><HackathonDetails /></ProtectedRoute>} />
               <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
               <Route path="/achievements" element={<ProtectedRoute><Achievements /></ProtectedRoute>} />
+              <Route path="/saved-events" element={<ProtectedRoute><SavedEvents /></ProtectedRoute>} />
               <Route path="/admin/seed" element={<ProtectedRoute><AdminSeed /></ProtectedRoute>} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
