@@ -16,7 +16,7 @@ import {
   Plus
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { getUserProjects, getRecentHackathons } from '@/services/firestoreService';
+import { getUserProjects, getRecentHackathons, getUserApplications, getUserHackathonApplicationIds } from '@/services/firestoreService';
 import { Project, Hackathon } from '@/types/firestore';
 
 const Dashboard = () => {
@@ -24,6 +24,8 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [projects, setProjects] = useState<Project[]>([]);
   const [hackathons, setHackathons] = useState<Hackathon[]>([]);
+  const [applicationsCount, setApplicationsCount] = useState(0);
+  const [hackathonsJoinedCount, setHackathonsJoinedCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -38,16 +40,22 @@ const Dashboard = () => {
       
       try {
         console.log('Dashboard: Fetching user projects and hackathons');
-        const [userProjects, upcomingHackathons] = await Promise.all([
+        const [userProjects, upcomingHackathons, userApplications, hackathonIds] = await Promise.all([
           getUserProjects(user.id, 3),
-          getRecentHackathons(5)
+          getRecentHackathons(5),
+          getUserApplications(user.id),
+          getUserHackathonApplicationIds(user.id)
         ]);
         
         console.log('Dashboard: Projects fetched:', userProjects.length, 'projects');
         console.log('Dashboard: Hackathons fetched:', upcomingHackathons.length, 'hackathons');
+        console.log('Dashboard: Applications fetched:', userApplications.length);
+        console.log('Dashboard: Hackathons joined:', hackathonIds.length);
         
         setProjects(userProjects);
         setHackathons(upcomingHackathons);
+        setApplicationsCount(userApplications.length);
+        setHackathonsJoinedCount(hackathonIds.length);
       } catch (error) {
         console.error('Dashboard: Error fetching dashboard data:', error);
       } finally {
@@ -60,9 +68,9 @@ const Dashboard = () => {
 
   const stats = [
     { title: 'Active Projects', value: projects.length.toString(), icon: Trophy, color: 'text-dicey-azure' },
-    { title: 'Hackathons Joined', value: hackathons.length.toString(), icon: Users, color: 'text-dicey-magenta' },
-    { title: 'Applications', value: '0', icon: Calendar, color: 'text-dicey-yellow' },
-    { title: 'Profile Views', value: '0', icon: Target, color: 'text-green-600' },
+    { title: 'Hackathons Joined', value: hackathonsJoinedCount.toString(), icon: Users, color: 'text-dicey-magenta' },
+    { title: 'Applications', value: applicationsCount.toString(), icon: Calendar, color: 'text-dicey-yellow' },
+    { title: 'Profile Views', value: user?.profileViews?.toString() || '0', icon: Target, color: 'text-green-600' },
   ];
 
   return (

@@ -19,16 +19,18 @@ import {
   Trophy,
   Star
 } from "lucide-react";
-import { getAllProjects } from '@/services/firestoreService';
+import { getAllProjects, getUserSavedProjectIds, toggleSaveProject } from '@/services/firestoreService';
 import { Project } from '@/types/firestore';
+import { useAuth } from '@/contexts/AuthContext';
 
 const ExploreProjects = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedProfile, setSelectedProfile] = useState('all');
+  const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedDifficulty, setSelectedDifficulty] = useState('all');
-  const [selectedOrganization, setSelectedOrganization] = useState('all');
   const [projects, setProjects] = useState<Project[]>([]);
+  const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -46,13 +48,29 @@ const ExploreProjects = () => {
     fetchProjects();
   }, []);
 
+  useEffect(() => {
+    const loadSaved = async () => {
+      if (!user?.id) return;
+      try {
+        const ids = await getUserSavedProjectIds(user.id);
+        setSavedIds(new Set(ids));
+      } catch (e) {
+        console.error('Error loading saved projects', e);
+      }
+    };
+    loadSaved();
+  }, [user?.id]);
+
   const filteredProjects = projects.filter((project) => {
     const matchesSearch = project.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           project.description?.toLowerCase().includes(searchTerm.toLowerCase());
     
+    const matchesCategory = selectedCategory === 'all' || 
+                           project.category?.toLowerCase() === selectedCategory.toLowerCase();
+    
     const matchesDifficulty = selectedDifficulty === 'all' || project.difficulty === selectedDifficulty;
     
-    return matchesSearch && matchesDifficulty;
+    return matchesSearch && matchesCategory && matchesDifficulty;
   });
 
   return (
@@ -65,10 +83,6 @@ const ExploreProjects = () => {
             <p className="text-gray-600 mt-1">Discover amazing projects from the community</p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline">
-              <Heart className="mr-2 h-4 w-4" />
-              Saved
-            </Button>
             <Button onClick={() => navigate('/add-project')} className="bg-dicey-purple hover:bg-dicey-purple/90">
               <Trophy className="mr-2 h-4 w-4" />
               Add Project
@@ -90,9 +104,9 @@ const ExploreProjects = () => {
                 />
               </div>
               
-              <Select value={selectedProfile} onValueChange={setSelectedProfile}>
+              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
                 <SelectTrigger>
-                  <SelectValue placeholder="All Profiles" />
+                  <SelectValue placeholder="All Categories" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Categories</SelectItem>
@@ -100,6 +114,8 @@ const ExploreProjects = () => {
                   <SelectItem value="Mobile App">Mobile App</SelectItem>
                   <SelectItem value="Data Science">Data Science</SelectItem>
                   <SelectItem value="AI/ML">AI/ML</SelectItem>
+                  <SelectItem value="IoT">IoT</SelectItem>
+                  <SelectItem value="Blockchain">Blockchain</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -114,11 +130,6 @@ const ExploreProjects = () => {
                   <SelectItem value="Advanced">Advanced</SelectItem>
                 </SelectContent>
               </Select>
-
-              <Button variant="outline" className="w-full">
-                <Filter className="mr-2 h-4 w-4" />
-                More Filters
-              </Button>
             </div>
           </CardContent>
         </Card>
@@ -142,14 +153,25 @@ const ExploreProjects = () => {
                   className="w-full h-48 object-cover rounded-t-lg"
                 />
                 <Button
-                  variant="ghost"
+                  variant={savedIds.has(project.id) ? "secondary" : "ghost"}
                   size="icon"
                   className="absolute bottom-3 right-3 bg-white/90 hover:bg-white"
-                  onClick={(e) => {
+                  onClick={async (e) => {
                     e.stopPropagation();
+                    if (!user?.id) return;
+                    try {
+                      const nowSaved = await toggleSaveProject(user.id, project.id);
+                      setSavedIds((prev) => {
+                        const n = new Set(prev);
+                        if (nowSaved) n.add(project.id); else n.delete(project.id);
+                        return n;
+                      });
+                    } catch (err) {
+                      console.error('Toggle save failed', err);
+                    }
                   }}
                 >
-                  <Heart className="h-4 w-4" />
+                  <Heart className="h-4 w-4" fill={savedIds.has(project.id) ? "currentColor" : "none"} />
                 </Button>
               </div>
               
@@ -188,15 +210,6 @@ const ExploreProjects = () => {
           ))}
         </div>
 
-        {/* Load More */}
-        {filteredProjects.length > 0 && (
-          <div className="text-center pt-6">
-            <Button variant="outline" size="lg">
-              Load More Projects
-            </Button>
-          </div>
-        )}
-
         {/* No Results */}
         {filteredProjects.length === 0 && !loading && (
           <Card className="text-center py-12">
@@ -208,9 +221,8 @@ const ExploreProjects = () => {
               </p>
               <Button onClick={() => {
                 setSearchTerm('');
-                setSelectedProfile('all');
+                setSelectedCategory('all');
                 setSelectedDifficulty('all');
-                setSelectedOrganization('all');
               }}>
                 Clear Filters
               </Button>

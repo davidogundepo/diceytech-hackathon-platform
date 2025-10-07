@@ -316,6 +316,65 @@ export const awardAchievement = async (userId: string, achievementId: string): P
   return docRef.id;
 };
 
+// Saved Projects (Favorites)
+export const toggleSaveProject = async (userId: string, projectId: string): Promise<boolean> => {
+  const favRef = doc(db, 'user_saved_projects', `${userId}_${projectId}`);
+  const snap = await getDoc(favRef);
+  if (snap.exists()) {
+    await deleteDoc(favRef);
+    return false; // now unsaved
+  }
+  await setDoc(favRef, { userId, projectId, createdAt: Timestamp.now() });
+  return true; // now saved
+};
+
+export const getUserSavedProjectIds = async (userId: string): Promise<string[]> => {
+  const q = query(collection(db, 'user_saved_projects'), where('userId', '==', userId));
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(d => (d.data() as any).projectId as string);
+};
+
+export const getUserSavedProjects = async (userId: string): Promise<Project[]> => {
+  const ids = await getUserSavedProjectIds(userId);
+  const docs = await Promise.all(ids.map(id => getDoc(doc(db, 'projects', id))));
+  return docs
+    .filter(s => s.exists())
+    .map(s => ({ id: s.id, ...s.data() } as Project));
+};
+
+// Check if user has applied to hackathon
+export const hasUserAppliedToHackathon = async (userId: string, hackathonId: string): Promise<boolean> => {
+  const q = query(
+    collection(db, 'applications'),
+    where('userId', '==', userId),
+    where('hackathonId', '==', hackathonId)
+  );
+  const querySnapshot = await getDocs(q);
+  return !querySnapshot.empty;
+};
+
+// Get user's hackathon application IDs
+export const getUserHackathonApplicationIds = async (userId: string): Promise<string[]> => {
+  const q = query(
+    collection(db, 'applications'),
+    where('userId', '==', userId),
+    where('type', '==', 'hackathon')
+  );
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(doc => (doc.data() as Application).hackathonId).filter(id => id) as string[];
+};
+
+// Increment profile views
+export const incrementProfileViews = async (userId: string): Promise<void> => {
+  const userRef = doc(db, 'users', userId);
+  const userDoc = await getDoc(userRef);
+  const currentViews = (userDoc.data()?.profileViews || 0) as number;
+  await updateDoc(userRef, {
+    profileViews: currentViews + 1,
+    updatedAt: Timestamp.now()
+  });
+};
+
 // Search Operations
 export const searchProjects = async (searchTerm: string): Promise<Project[]> => {
   // Note: For production, consider using Algolia or similar for better search

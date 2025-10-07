@@ -19,18 +19,21 @@ import {
   Heart,
   Bookmark
 } from "lucide-react";
-import { getAllHackathons, getUserSavedHackathonIds, toggleSaveHackathon } from '@/services/firestoreService';
+import { getAllHackathons, getUserSavedHackathonIds, toggleSaveHackathon, hasUserAppliedToHackathon, createApplication } from '@/services/firestoreService';
 import { Hackathon } from '@/types/firestore';
 import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
 
 const Hackathons = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [hackathons, setHackathons] = useState<Hackathon[]>([]);
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+  const [appliedIds, setAppliedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -61,6 +64,25 @@ const Hackathons = () => {
     loadSaved();
   }, [user?.id]);
 
+  useEffect(() => {
+    const loadApplied = async () => {
+      if (!user?.id || hackathons.length === 0) return;
+      try {
+        const applied = await Promise.all(
+          hackathons.map(h => hasUserAppliedToHackathon(user.id, h.id))
+        );
+        const appliedSet = new Set<string>();
+        hackathons.forEach((h, i) => {
+          if (applied[i]) appliedSet.add(h.id);
+        });
+        setAppliedIds(appliedSet);
+      } catch (e) {
+        console.error('Error loading applied hackathons', e);
+      }
+    };
+    loadApplied();
+  }, [user?.id, hackathons]);
+
   const filteredHackathons = hackathons.filter((hackathon) => {
     const matchesSearch = hackathon.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           hackathon.description?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -76,6 +98,59 @@ const Hackathons = () => {
     const matchesStatus = selectedStatus === 'all' || selectedStatus === status;
     return matchesSearch && matchesCategory && matchesStatus;
   });
+
+  const getHackathonStatus = (hackathon: Hackathon): 'active' | 'upcoming' | 'completed' => {
+    const start = hackathon.startDate?.seconds ? hackathon.startDate.seconds * 1000 : 0;
+    const end = hackathon.endDate?.seconds ? hackathon.endDate.seconds * 1000 : 0;
+    const now = Date.now();
+    if (now >= start && now <= end) return 'active';
+    if (now > end) return 'completed';
+    return 'upcoming';
+  };
+
+  const handleApply = async (hackathon: Hackathon, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!user?.id) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to apply to hackathons.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (appliedIds.has(hackathon.id)) {
+      toast({
+        title: "Already Applied",
+        description: "You have already applied to this hackathon.",
+      });
+      return;
+    }
+
+    try {
+      await createApplication({
+        userId: user.id,
+        type: 'hackathon',
+        hackathonId: hackathon.id,
+        title: hackathon.title,
+        status: 'pending'
+      });
+      
+      setAppliedIds(prev => new Set(prev).add(hackathon.id));
+      
+      toast({
+        title: "Application Submitted",
+        description: `Your application to ${hackathon.title} has been submitted successfully.`,
+      });
+    } catch (error) {
+      console.error('Error applying to hackathon:', error);
+      toast({
+        title: "Application Failed",
+        description: "Failed to submit your application. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
 
   return (
     <DashboardLayout>
@@ -152,19 +227,32 @@ const Hackathons = () => {
             <p className="text-gray-500 col-span-2 text-center">Loading hackathons...</p>
           ) : filteredHackathons.length === 0 ? (
             <p className="text-gray-500 col-span-2 text-center">No hackathons found</p>
-          ) : filteredHackathons.map((hackathon) => (
-            <Card key={hackathon.id} className="cursor-pointer transition-all hover:shadow-lg"
-                  onClick={() => navigate(`/hackathon/${hackathon.id}`)}>
-              <div className="relative">
-                <img 
-                  src={hackathon.imageUrl || 'https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=400'} 
-                  alt={hackathon.title}
-                  className="w-full h-48 object-cover rounded-t-lg"
-                />
-                <Badge className="absolute top-3 right-3 bg-green-500">
-                  Active
-                </Badge>
-              </div>
+          ) : filteredHackathons.map((hackathon) => {
+            const status = getHackathonStatus(hackathon);
+            const statusColors = {
+              active: 'bg-green-500',
+              upcoming: 'bg-blue-500',
+              completed: 'bg-gray-500'
+            };
+            const statusLabels = {
+              active: 'Active',
+              upcoming: 'Upcoming',
+              completed: 'Completed'
+            };
+            
+            return (
+              <Card key={hackathon.id} className="cursor-pointer transition-all hover:shadow-lg"
+                    onClick={() => navigate(`/hackathon/${hackathon.id}`)}>
+                <div className="relative">
+                  <img 
+                    src={hackathon.imageUrl || 'https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=400'} 
+                    alt={hackathon.title}
+                    className="w-full h-48 object-cover rounded-t-lg"
+                  />
+                  <Badge className={`absolute top-3 right-3 ${statusColors[status]}`}>
+                    {statusLabels[status]}
+                  </Badge>
+                </div>
               
               <CardContent className="p-6">
                 <div className="flex items-start justify-between mb-3">
@@ -210,8 +298,10 @@ const Hackathons = () => {
                 <div className="flex gap-2">
                   <Button 
                     className="flex-1 bg-dicey-teal hover:bg-dicey-teal/90"
+                    onClick={(e) => handleApply(hackathon, e)}
+                    disabled={appliedIds.has(hackathon.id)}
                   >
-                    View Details
+                    {appliedIds.has(hackathon.id) ? 'Applied' : 'Apply Now'}
                   </Button>
                   <Button 
                     variant={savedIds.has(hackathon.id) ? "secondary" : "outline"} 
@@ -237,7 +327,8 @@ const Hackathons = () => {
                 </div>
               </CardContent>
             </Card>
-          ))}
+          );
+        })}
         </div>
 
 
