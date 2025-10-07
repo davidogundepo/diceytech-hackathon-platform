@@ -15,17 +15,22 @@ import {
   MapPin,
   Filter,
   Star,
-  ArrowRight
+  ArrowRight,
+  Heart,
+  Bookmark
 } from "lucide-react";
-import { getAllHackathons } from '@/services/firestoreService';
+import { getAllHackathons, getUserSavedHackathonIds, toggleSaveHackathon } from '@/services/firestoreService';
 import { Hackathon } from '@/types/firestore';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Hackathons = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [hackathons, setHackathons] = useState<Hackathon[]>([]);
+  const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -43,12 +48,33 @@ const Hackathons = () => {
     fetchHackathons();
   }, []);
 
+  useEffect(() => {
+    const loadSaved = async () => {
+      if (!user?.id) return;
+      try {
+        const ids = await getUserSavedHackathonIds(user.id);
+        setSavedIds(new Set(ids));
+      } catch (e) {
+        console.error('Error loading saved hackathons', e);
+      }
+    };
+    loadSaved();
+  }, [user?.id]);
+
   const filteredHackathons = hackathons.filter((hackathon) => {
     const matchesSearch = hackathon.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           hackathon.description?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === 'all' || hackathon.category === selectedCategory;
-    
-    return matchesSearch && matchesCategory;
+    const matchesCategory = selectedCategory === 'all' || (hackathon.category || '').toLowerCase() === selectedCategory.toLowerCase();
+
+    const start = hackathon.startDate?.seconds ? hackathon.startDate.seconds * 1000 : 0;
+    const end = hackathon.endDate?.seconds ? hackathon.endDate.seconds * 1000 : 0;
+    const now = Date.now();
+    let status: 'active' | 'upcoming' | 'completed' = 'upcoming';
+    if (now >= start && now <= end) status = 'active';
+    else if (now > end) status = 'completed';
+
+    const matchesStatus = selectedStatus === 'all' || selectedStatus === status;
+    return matchesSearch && matchesCategory && matchesStatus;
   });
 
   return (
@@ -61,8 +87,8 @@ const Hackathons = () => {
             <p className="text-gray-600 dark:text-gray-300 mt-1">Discover and join exciting hackathons</p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline">
-              <Star className="mr-2 h-4 w-4" />
+            <Button variant="outline" onClick={() => navigate('/saved-events')}>
+              <Bookmark className="mr-2 h-4 w-4" />
               Saved Events
             </Button>
             <Button className="bg-dicey-teal hover:bg-dicey-teal/90">
@@ -128,7 +154,7 @@ const Hackathons = () => {
             <p className="text-gray-500 col-span-2 text-center">No hackathons found</p>
           ) : filteredHackathons.map((hackathon) => (
             <Card key={hackathon.id} className="cursor-pointer transition-all hover:shadow-lg"
-                  onClick={() => navigate(`/project/${hackathon.id}`)}>
+                  onClick={() => navigate(`/hackathon/${hackathon.id}`)}>
               <div className="relative">
                 <img 
                   src={hackathon.imageUrl || 'https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=400'} 
@@ -187,8 +213,26 @@ const Hackathons = () => {
                   >
                     View Details
                   </Button>
-                  <Button variant="outline" size="icon">
-                    <Star className="h-4 w-4" />
+                  <Button 
+                    variant={savedIds.has(hackathon.id) ? "secondary" : "outline"} 
+                    size="icon"
+                    aria-label={savedIds.has(hackathon.id) ? "Unsave hackathon" : "Save hackathon"}
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      if (!user?.id) return;
+                      try {
+                        const nowSaved = await toggleSaveHackathon(user.id, hackathon.id);
+                        setSavedIds((prev) => {
+                          const n = new Set(prev);
+                          if (nowSaved) n.add(hackathon.id); else n.delete(hackathon.id);
+                          return n;
+                        });
+                      } catch (err) {
+                        console.error('Toggle save failed', err);
+                      }
+                    }}
+                  >
+                    <Heart className="h-4 w-4" fill={savedIds.has(hackathon.id) ? "currentColor" : "none"} />
                   </Button>
                 </div>
               </CardContent>
@@ -196,14 +240,6 @@ const Hackathons = () => {
           ))}
         </div>
 
-        {/* Load More */}
-        {filteredHackathons.length > 0 && (
-          <div className="text-center pt-6">
-            <Button variant="outline" size="lg">
-              Load More Hackathons
-            </Button>
-          </div>
-        )}
 
         {/* No Results */}
         {filteredHackathons.length === 0 && !loading && (
