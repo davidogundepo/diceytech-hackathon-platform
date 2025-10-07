@@ -91,6 +91,7 @@ const HackathonDetails = () => {
         userId: user.id,
         hackathonId: id,
         type: 'hackathon',
+        title: hackathon?.title || 'Hackathon Application',
         status: 'pending',
         applicationData: formData
       });

@@ -91,6 +91,7 @@ export interface Application {
   userId: string;
   hackathonId?: string;
   jobId?: string;
+  title: string;
   type: 'hackathon' | 'job';
   status: 'pending' | 'under_review' | 'accepted' | 'rejected';
   applicationData: Record<string, any>;

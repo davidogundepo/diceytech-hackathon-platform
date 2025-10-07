@@ -133,7 +133,8 @@ const Hackathons = () => {
         type: 'hackathon',
         hackathonId: hackathon.id,
         title: hackathon.title,
-        status: 'pending'
+        status: 'pending',
+        applicationData: {}
       });
       
       setAppliedIds(prev => new Set(prev).add(hackathon.id));
