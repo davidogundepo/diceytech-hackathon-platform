@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -36,6 +36,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useTheme } from "@/contexts/ThemeContext";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { subscribeToUserNotifications, markNotificationAsRead } from "@/services/firestoreService";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -46,6 +48,19 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   const { theme } = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
+
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const unsubscribe = subscribeToUserNotifications(user.id, (notifs) => {
+      const unread = notifs.filter((n) => !n.isRead).length;
+      setUnreadCount(unread);
+    });
+    return () => {
+      try { unsubscribe && unsubscribe(); } catch {}
+    };
+  }, [user?.id]);
 
   const menuItems = [
     { title: 'Dashboard', url: '/dashboard', icon: Home },
@@ -118,12 +133,15 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
                 <Button variant="ghost" size="sm" className="w-full justify-start hover:bg-dicey-yellow/20" onClick={() => navigate('/hackathons')}>
                   <Trophy className="mr-2 h-4 w-4" />
                   Hackathons
-                  <Badge variant="secondary" className="ml-auto bg-dicey-yellow text-dicey-dark-pink">12</Badge>
                 </Button>
                 <Button variant="ghost" size="sm" className="w-full justify-start hover:bg-dicey-magenta/20" onClick={() => navigate('/notifications')}>
                   <Bell className="mr-2 h-4 w-4" />
                   Notifications
-                  <Badge variant="destructive" className="ml-auto bg-dicey-magenta">3</Badge>
+                  {unreadCount > 0 && (
+                    <Badge variant="destructive" className="ml-auto bg-dicey-magenta">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </Badge>
+                  )}
                 </Button>
                 <Button variant="ghost" size="sm" className="w-full justify-start hover:bg-dicey-azure/20" onClick={() => navigate('/achievements')}>
                   <Award className="mr-2 h-4 w-4" />
@@ -148,12 +166,21 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
               <div className="flex items-center gap-4">
                 <ThemeToggle />
                 
-                <Button variant="ghost" size="icon" className="relative hover:bg-dicey-magenta/20" onClick={() => navigate('/notifications')}>
-                  <Bell className="h-5 w-5" />
-                  <Badge variant="destructive" className="absolute -top-1 -right-1 h-5 w-5 p-0 text-xs bg-dicey-magenta">
-                    3
-                  </Badge>
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="icon" className="relative hover:bg-dicey-magenta/20" onClick={() => navigate('/notifications')}>
+                      <Bell className="h-5 w-5" />
+                      {unreadCount > 0 && (
+                        <Badge variant="destructive" className="absolute -top-1 -right-1 h-5 w-5 p-0 text-xs flex items-center justify-center bg-dicey-magenta">
+                          {unreadCount > 9 ? '9+' : unreadCount}
+                        </Badge>
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{unreadCount > 0 ? `${unreadCount} unread notification${unreadCount > 1 ? 's' : ''}` : 'No new notifications'}</p>
+                  </TooltipContent>
+                </Tooltip>
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
