@@ -30,7 +30,8 @@ import {
   FolderOpen,
   FileText,
   Trophy,
-  Award
+  Award,
+  Briefcase
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Badge } from "@/components/ui/badge";
@@ -67,6 +68,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
     { title: 'Explore Projects', url: '/explore-projects', icon: Search },
     { title: 'My Portfolio', url: '/my-portfolio', icon: User },
     { title: 'My Applications', url: '/my-applications', icon: FileText },
+    { title: 'Job Opportunities', url: '/job-opportunities', icon: Briefcase },
   ];
 
   const handleLogout = () => {
@@ -79,16 +81,16 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-gray-50 dark:bg-background">
-        <Sidebar className="border-r border-gray-200 dark:border-gray-800">
-          <SidebarHeader className="p-6 border-b border-gray-200 dark:border-gray-800">
+        <Sidebar className="border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-card">
+          <SidebarHeader className="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-800">
             <div className="flex items-center gap-3">
               {theme === 'dark' ? (
-                <span className="text-xl font-bold text-dicey-yellow">DiceyTech</span>
+                <span className="text-lg sm:text-xl font-bold text-dicey-yellow">DiceyTech</span>
               ) : (
                 <img 
                   src="https://firebasestorage.googleapis.com/v0/b/icdatinnovation.appspot.com/o/redtech_africa_websitee_v2%2Fdicey%20tech%2Fsponsor_diceytech.png?alt=media&token=201427f2-3a3c-4dc1-a717-f101f8c7d7e2" 
                   alt="DiceyTech" 
-                  className="h-10 w-auto object-contain"
+                  className="h-8 sm:h-10 w-auto object-contain"
                 />
               )}
             </div>
@@ -135,7 +137,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
                   size="sm" 
                   className={`w-full justify-start ${
                     isActive('/hackathons') 
-                      ? 'bg-dicey-yellow/20 text-dicey-yellow' 
+                      ? 'bg-dicey-yellow/40 text-dicey-black' 
                       : 'hover:bg-dicey-yellow/20'
                   }`}
                   onClick={() => navigate('/hackathons')}
@@ -181,50 +183,50 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
 
         <div className="flex-1 flex flex-col">
           {/* Top Header */}
-          <header className="bg-white dark:bg-background border-b border-gray-200 dark:border-gray-800 px-6 py-4">
+          <header className="bg-white dark:bg-card border-b border-gray-200 dark:border-gray-800 px-3 sm:px-6 py-3 sm:py-4">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 sm:gap-4">
                 <SidebarTrigger />
-                <div className="text-sm text-gray-600 dark:text-gray-300">
+                <div className="hidden sm:block text-sm text-gray-600 dark:text-gray-300">
                   Welcome back, <span className="font-medium text-gray-900 dark:text-white">{user?.displayName || user?.email}</span>
                 </div>
               </div>
 
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 sm:gap-4">
                 <ThemeToggle />
                 
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon" className="relative hover:bg-dicey-magenta/20" onClick={() => navigate('/notifications')}>
-                      <Bell className="h-5 w-5" />
+                    <Button variant="ghost" size="icon" className="relative hover:bg-dicey-magenta/20 h-9 w-9 sm:h-10 sm:w-10" onClick={() => navigate('/notifications')}>
+                      <Bell className="h-4 w-4 sm:h-5 sm:w-5" />
                       {unreadCount > 0 && (
-                        <Badge variant="destructive" className="absolute -top-1 -right-1 h-5 w-5 p-0 text-xs flex items-center justify-center bg-dicey-magenta">
+                        <Badge variant="destructive" className="absolute -top-1 -right-1 h-4 w-4 sm:h-5 sm:w-5 p-0 text-[10px] sm:text-xs flex items-center justify-center bg-dicey-magenta">
                           {unreadCount > 9 ? '9+' : unreadCount}
                         </Badge>
                       )}
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>
+                  <TooltipContent className="bg-popover text-popover-foreground border border-border z-50">
                     <p>{unreadCount > 0 ? `${unreadCount} unread notification${unreadCount > 1 ? 's' : ''}` : 'No new notifications'}</p>
                   </TooltipContent>
                 </Tooltip>
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="flex items-center gap-2 p-2 hover:bg-dicey-azure/20">
-                      <Avatar className="h-8 w-8">
+                    <Button variant="ghost" className="flex items-center gap-1 sm:gap-2 p-1 sm:p-2 hover:bg-dicey-azure/20 h-9 sm:h-10">
+                      <Avatar className="h-7 w-7 sm:h-8 sm:w-8">
                         <AvatarImage src={user?.photoURL || undefined} />
-                        <AvatarFallback className="bg-dicey-azure text-white">
+                        <AvatarFallback className="bg-dicey-azure text-white text-xs sm:text-sm">
                           {user?.displayName?.split(' ').map(n => n[0]).join('') || user?.email?.[0].toUpperCase() || 'U'}
                         </AvatarFallback>
                       </Avatar>
-                      <ChevronDown className="h-4 w-4" />
+                      <ChevronDown className="h-3 w-3 sm:h-4 sm:w-4 hidden sm:block" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuContent align="end" className="w-56 bg-popover text-popover-foreground border border-border z-50">
                     <div className="px-2 py-1.5">
                       <p className="text-sm font-medium">{user?.displayName || 'User'}</p>
-                      <p className="text-xs text-gray-500">{user?.email}</p>
+                      <p className="text-xs text-muted-foreground">{user?.email}</p>
                     </div>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={() => navigate('/profile')}>
@@ -232,7 +234,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
                       Profile
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={logout} className="text-red-600">
+                    <DropdownMenuItem onClick={logout} className="text-red-600 dark:text-red-400">
                       <LogOut className="mr-2 h-4 w-4" />
                       Sign out
                     </DropdownMenuItem>
@@ -243,7 +245,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
           </header>
 
           {/* Main Content */}
-          <main className="flex-1 p-6 overflow-auto">
+          <main className="flex-1 p-3 sm:p-4 md:p-6 overflow-auto bg-gray-50 dark:bg-background">
             {children}
           </main>
         </div>
