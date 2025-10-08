@@ -449,20 +449,25 @@ const MyPortfolio = () => {
                 <CardDescription>Visual representation of skill proficiency levels</CardDescription>
               </CardHeader>
               <CardContent>
-                <ChartContainer config={chartConfig} className="mx-auto aspect-square max-h-[400px]">
-                  <RadarChart data={skillsData}>
-                    <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
-                    <PolarGrid />
-                    <PolarAngleAxis dataKey="skill" />
-                    <PolarRadiusAxis domain={[0, 100]} tick={false} />
-                    <Radar
-                      dataKey="level"
-                      stroke="#428b9f"
-                      fill="#428b9f"
-                      fillOpacity={0.3}
-                      strokeWidth={2}
-                    />
-                  </RadarChart>
+                <ChartContainer config={chartConfig} className="mx-auto aspect-square max-h-[500px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RadarChart data={skillsData} margin={{ top: 40, right: 40, bottom: 40, left: 40 }}>
+                      <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
+                      <PolarGrid />
+                      <PolarAngleAxis 
+                        dataKey="skill" 
+                        tick={{ fill: 'hsl(var(--foreground))', fontSize: 12 }}
+                      />
+                      <PolarRadiusAxis domain={[0, 100]} tick={false} />
+                      <Radar
+                        dataKey="level"
+                        stroke="#428b9f"
+                        fill="#428b9f"
+                        fillOpacity={0.3}
+                        strokeWidth={2}
+                      />
+                    </RadarChart>
+                  </ResponsiveContainer>
                 </ChartContainer>
               </CardContent>
             </Card>
