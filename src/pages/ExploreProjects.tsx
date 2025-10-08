@@ -93,7 +93,7 @@ const ExploreProjects = () => {
               <Heart className="mr-2 h-4 w-4" />
               Saved Projects
             </Button>
-            <Button onClick={() => navigate('/add-project')} className="bg-dicey-purple hover:bg-dicey-purple/90">
+            <Button onClick={() => navigate('/add-project')} className="bg-dicey-purple hover:bg-dicey-purple/90 text-black dark:text-white border border-black dark:border-white rounded-md">
               <Trophy className="mr-2 h-4 w-4" />
               Add Project
             </Button>

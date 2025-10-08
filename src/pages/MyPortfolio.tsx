@@ -7,6 +7,16 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { 
   Plus, 
   Edit, 
@@ -22,10 +32,12 @@ import {
   Code,
   Database,
   Brain,
-  Palette
+  Palette,
+  Trash2
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ResponsiveContainer } from 'recharts';
+import { toast } from "@/hooks/use-toast";
 
 const MyPortfolio = () => {
   const { user } = useAuth();
@@ -34,6 +46,8 @@ const MyPortfolio = () => {
   const [applications, setApplications] = React.useState<any[]>([]);
   const [achievements, setAchievements] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+  const [projectToDelete, setProjectToDelete] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     const fetchPortfolioData = async () => {
@@ -103,8 +117,63 @@ const MyPortfolio = () => {
     },
   };
 
+  const handleEditProject = (projectId: string) => {
+    navigate(`/add-project?edit=${projectId}`);
+  };
+
+  const handleDeleteClick = (projectId: string) => {
+    setProjectToDelete(projectId);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!projectToDelete) return;
+    
+    try {
+      const { deleteProject } = await import('@/services/firestoreService');
+      await deleteProject(projectToDelete);
+      
+      // Update local state
+      setProjects(projects.filter(p => p.id !== projectToDelete));
+      
+      toast({
+        title: "Project deleted",
+        description: "Your project has been successfully removed.",
+      });
+    } catch (error) {
+      console.error('Error deleting project:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete project. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setDeleteDialogOpen(false);
+      setProjectToDelete(null);
+    }
+  };
+
   return (
     <DashboardLayout>
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Project</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this project? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteConfirm}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <div className="space-y-8 animate-fade-in max-w-4xl mx-auto">
         {/* Header Section */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -321,23 +390,45 @@ const MyPortfolio = () => {
                         </div>
                       </div>
                       
-                      <div className="flex gap-2">
-                        {project.githubUrl && (
-                          <Button size="sm" variant="outline" className="flex-1" asChild>
-                            <a href={project.githubUrl} target="_blank" rel="noopener noreferrer">
-                              <Github className="mr-1 h-3 w-3" />
-                              Code
-                            </a>
+                      <div className="space-y-2">
+                        <div className="flex gap-2">
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            className="flex-1"
+                            onClick={() => handleEditProject(project.id)}
+                          >
+                            <Edit className="mr-1 h-3 w-3" />
+                            Edit
                           </Button>
-                        )}
-                        {project.demoUrl && (
-                          <Button size="sm" variant="outline" className="flex-1" asChild>
-                            <a href={project.demoUrl} target="_blank" rel="noopener noreferrer">
-                              <ExternalLink className="mr-1 h-3 w-3" />
-                              Demo
-                            </a>
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            className="flex-1 text-red-600 hover:text-red-700 hover:bg-red-50"
+                            onClick={() => handleDeleteClick(project.id)}
+                          >
+                            <Trash2 className="mr-1 h-3 w-3" />
+                            Delete
                           </Button>
-                        )}
+                        </div>
+                        <div className="flex gap-2">
+                          {project.githubUrl && (
+                            <Button size="sm" variant="outline" className="flex-1" asChild>
+                              <a href={project.githubUrl} target="_blank" rel="noopener noreferrer">
+                                <Github className="mr-1 h-3 w-3" />
+                                Code
+                              </a>
+                            </Button>
+                          )}
+                          {project.demoUrl && (
+                            <Button size="sm" variant="outline" className="flex-1" asChild>
+                              <a href={project.demoUrl} target="_blank" rel="noopener noreferrer">
+                                <ExternalLink className="mr-1 h-3 w-3" />
+                                Demo
+                              </a>
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </CardContent>

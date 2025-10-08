@@ -1,6 +1,6 @@
 
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -28,7 +28,11 @@ import { toast } from "@/hooks/use-toast";
 
 const AddProject = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const editProjectId = searchParams.get('edit');
   const [activeTab, setActiveTab] = useState('overview');
+  const [loading, setLoading] = useState(false);
+  const [existingImageUrl, setExistingImageUrl] = useState<string>('');
   const [projectData, setProjectData] = useState({
     title: '',
     description: '',
@@ -48,6 +52,56 @@ const AddProject = () => {
   const [newTech, setNewTech] = useState('');
   const [newSkill, setNewSkill] = useState('');
   const [newCollaborator, setNewCollaborator] = useState('');
+
+  // Load existing project data if editing
+  useEffect(() => {
+    const loadProjectData = async () => {
+      if (editProjectId) {
+        setLoading(true);
+        try {
+          const { getProjectById } = await import('@/services/firestoreService');
+          const project = await getProjectById(editProjectId);
+          
+          if (project) {
+            setProjectData({
+              title: project.title || '',
+              description: project.description || '',
+              overview: project.overview || '',
+              techStack: project.techStack || [],
+              githubUrl: project.githubUrl || '',
+              demoUrl: project.demoUrl || '',
+              videoUrl: project.videoUrl || '',
+              category: project.category || '',
+              difficulty: project.difficulty || '',
+              outcomes: project.outcomes || '',
+              skills: project.skills || [],
+              collaborators: project.collaborators || [],
+              image: null
+            });
+            setExistingImageUrl(project.imageUrl || '');
+          } else {
+            toast({
+              title: "Project not found",
+              description: "The project you're trying to edit doesn't exist.",
+              variant: "destructive"
+            });
+            navigate('/my-portfolio');
+          }
+        } catch (error) {
+          console.error('Error loading project:', error);
+          toast({
+            title: "Error",
+            description: "Failed to load project data.",
+            variant: "destructive"
+          });
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+    
+    loadProjectData();
+  }, [editProjectId, navigate]);
 
   const handleInputChange = (field: string, value: string) => {
     setProjectData(prev => ({ ...prev, [field]: value }));
@@ -128,8 +182,9 @@ const AddProject = () => {
       return;
     }
 
+    setLoading(true);
     try {
-      const { createProject } = await import('@/services/firestoreService');
+      const { createProject, updateProject } = await import('@/services/firestoreService');
       const { uploadProjectImage } = await import('@/services/storageService');
       const { useAuth } = await import('@/contexts/AuthContext');
       
@@ -144,9 +199,9 @@ const AddProject = () => {
         return;
       }
 
-      let imageUrl = '';
+      let imageUrl = existingImageUrl;
       
-      // Upload image if provided
+      // Upload new image if provided
       if (projectData.image) {
         try {
           imageUrl = await uploadProjectImage(projectData.image, currentUser.id);
@@ -154,13 +209,12 @@ const AddProject = () => {
           console.error('Error uploading image:', error);
           toast({
             title: "Warning",
-            description: "Failed to upload image, but project will be created without it.",
+            description: "Failed to upload image, but project will be saved.",
           });
         }
       }
 
-      // Create project in Firestore
-      await createProject({
+      const projectPayload = {
         userId: currentUser.id,
         title: projectData.title,
         description: projectData.description,
@@ -176,20 +230,34 @@ const AddProject = () => {
         collaborators: projectData.collaborators,
         imageUrl: imageUrl || 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=800',
         status: 'published'
-      });
+      };
 
-      toast({
-        title: "Project submitted successfully!",
-        description: "Your project has been added to your portfolio.",
-      });
+      if (editProjectId) {
+        // Update existing project
+        await updateProject(editProjectId, projectPayload);
+        toast({
+          title: "Project updated!",
+          description: "Your project has been successfully updated.",
+        });
+      } else {
+        // Create new project
+        await createProject(projectPayload);
+        toast({
+          title: "Project submitted successfully!",
+          description: "Your project has been added to your portfolio.",
+        });
+      }
+      
       navigate('/my-portfolio');
     } catch (error) {
-      console.error('Error creating project:', error);
+      console.error('Error saving project:', error);
       toast({
         title: "Error",
-        description: "Failed to create project. Please try again.",
+        description: `Failed to ${editProjectId ? 'update' : 'create'} project. Please try again.`,
         variant: "destructive"
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -207,22 +275,21 @@ const AddProject = () => {
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Add New Project</h1>
-            <p className="text-gray-600 mt-1">Share your project with the community</p>
+            <h1 className="text-3xl font-bold text-gray-900">{editProjectId ? 'Edit Project' : 'Add New Project'}</h1>
+            <p className="text-gray-600 mt-1">{editProjectId ? 'Update your project details' : 'Share your project with the community'}</p>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" onClick={handleSave} className="border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-800">
               Save Draft
             </Button>
-            {/* <Button onClick={handleSubmit} className="bg-dicey-purple hover:bg-dicey-purple/90 text-white">
+            <Button 
+              onClick={handleSubmit} 
+              disabled={loading}
+              className="bg-dicey-purple hover:bg-dicey-purple/90 text-black dark:text-white border border-black dark:border-white rounded-md"
+            >
               <Trophy className="mr-2 h-4 w-4" />
-              Submit Project
-            </Button> */}
-            <Button onClick={handleSubmit} className="bg-dicey-purple hover:bg-dicey-purple/90 text-black dark:text-white border border-black dark:border-white rounded-md">
-              <Trophy className="mr-2 h-4 w-4" />
-              Submit Project
+              {loading ? 'Saving...' : (editProjectId ? 'Update Project' : 'Submit Project')}
             </Button>
-
           </div>
         </div>
 
@@ -305,10 +372,23 @@ const AddProject = () => {
                           id="image-upload"
                         />
                         <label htmlFor="image-upload" className="cursor-pointer">
-                          <Image className="h-12 w-12 text-gray-400 mx-auto mb-2" />
-                          <p className="text-sm text-gray-600">
-                            {projectData.image ? projectData.image.name : 'Click to upload image'}
-                          </p>
+                          {existingImageUrl && !projectData.image ? (
+                            <div className="space-y-2">
+                              <img 
+                                src={existingImageUrl} 
+                                alt="Current project" 
+                                className="w-full h-32 object-cover rounded-lg mb-2"
+                              />
+                              <p className="text-sm text-gray-600">Click to change image</p>
+                            </div>
+                          ) : (
+                            <>
+                              <Image className="h-12 w-12 text-gray-400 mx-auto mb-2" />
+                              <p className="text-sm text-gray-600">
+                                {projectData.image ? projectData.image.name : 'Click to upload image'}
+                              </p>
+                            </>
+                          )}
                         </label>
                       </div>
                     </div>

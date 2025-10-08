@@ -7,7 +7,18 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import ProtectedAdminRoute from "@/components/admin/ProtectedAdminRoute";
 import Index from "./pages/Index";
+import AdminLogin from "./pages/admin/AdminLogin";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import HackathonManagement from "./pages/admin/HackathonManagement";
+import ApplicationManagement from "./pages/admin/ApplicationManagement";
+import UserManagement from "./pages/admin/UserManagement";
+import ProjectManagement from "./pages/admin/ProjectManagement";
+import NotificationCenter from "./pages/admin/NotificationCenter";
+import Analytics from "./pages/admin/Analytics";
+import Settings from "./pages/admin/Settings";
+import ContentManagement from "./pages/admin/ContentManagement";
 import Dashboard from "./pages/Dashboard";
 import ExploreProjects from "./pages/ExploreProjects";
 import MyPortfolio from "./pages/MyPortfolio";
@@ -52,6 +63,19 @@ const App = () => (
               <Route path="/saved-events" element={<ProtectedRoute><SavedEvents /></ProtectedRoute>} />
               <Route path="/saved-projects" element={<ProtectedRoute><SavedProjects /></ProtectedRoute>} />
               <Route path="/admin/seed" element={<ProtectedRoute><AdminSeed /></ProtectedRoute>} />
+              
+              {/* Admin Routes */}
+              <Route path="/admin/login" element={<AdminLogin />} />
+              <Route path="/admin/dashboard" element={<ProtectedAdminRoute><AdminDashboard /></ProtectedAdminRoute>} />
+              <Route path="/admin/hackathons" element={<ProtectedAdminRoute><HackathonManagement /></ProtectedAdminRoute>} />
+              <Route path="/admin/applications" element={<ProtectedAdminRoute><ApplicationManagement /></ProtectedAdminRoute>} />
+              <Route path="/admin/users" element={<ProtectedAdminRoute><UserManagement /></ProtectedAdminRoute>} />
+              <Route path="/admin/projects" element={<ProtectedAdminRoute><ProjectManagement /></ProtectedAdminRoute>} />
+              <Route path="/admin/notifications" element={<ProtectedAdminRoute><NotificationCenter /></ProtectedAdminRoute>} />
+              <Route path="/admin/content" element={<ProtectedAdminRoute><ContentManagement /></ProtectedAdminRoute>} />
+              <Route path="/admin/analytics" element={<ProtectedAdminRoute><Analytics /></ProtectedAdminRoute>} />
+              <Route path="/admin/settings" element={<ProtectedAdminRoute><Settings /></ProtectedAdminRoute>} />
+              
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

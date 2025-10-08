@@ -16,6 +16,15 @@ export const uploadProjectImage = async (file: File, userId: string): Promise<st
   return downloadURL;
 };
 
+export const uploadFile = async (file: File, folder: string, userId?: string): Promise<string> => {
+  const timestamp = Date.now();
+  const path = userId ? `${folder}/${userId}/${timestamp}-${file.name}` : `${folder}/${timestamp}-${file.name}`;
+  const storageRef = ref(storage, path);
+  await uploadBytes(storageRef, file);
+  const downloadURL = await getDownloadURL(storageRef);
+  return downloadURL;
+};
+
 export const deleteFile = async (fileUrl: string): Promise<void> => {
   const fileRef = ref(storage, fileUrl);
   await deleteObject(fileRef);

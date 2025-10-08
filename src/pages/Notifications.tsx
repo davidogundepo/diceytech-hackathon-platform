@@ -153,38 +153,38 @@ const Notifications = () => {
                   {filteredNotifications.map((notification) => (
                     <Card 
                       key={notification.id} 
-                      className={`transition-all hover:shadow-md ${
+                      className={`transition-smooth hover:shadow-lg hover-lift ${
                         !notification.isRead 
-                          ? 'border-dicey-teal/50 bg-dicey-teal/5 dark:bg-dicey-teal/10' 
-                          : 'border-gray-200 dark:border-gray-700'
+                          ? 'border-l-4 border-l-dicey-teal bg-dicey-teal/5 dark:bg-dicey-teal/10' 
+                          : 'border-l-4 border-l-transparent'
                       }`}
                     >
-                      <CardContent className="p-4">
+                      <CardContent className="p-5">
                         <div className="flex items-start gap-4">
                           <div className="flex-shrink-0">
-                            <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                            <div className="w-11 h-11 rounded-full bg-gradient-to-br from-primary/10 to-primary/5 dark:from-primary/20 dark:to-primary/10 flex items-center justify-center border border-primary/10">
                               {getIcon(notification.type)}
                             </div>
                           </div>
                           
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-start justify-between">
-                              <div>
-                                <h3 className={`font-semibold ${
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="flex-1">
+                                <h3 className={`text-base font-semibold leading-tight ${
                                   !notification.isRead 
                                     ? 'text-gray-900 dark:text-white' 
                                     : 'text-gray-700 dark:text-gray-300'
                                 }`}>
                                   {notification.title}
                                 </h3>
-                                <p className="text-gray-600 dark:text-gray-400 mt-1">
+                                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1.5 leading-relaxed">
                                   {notification.message}
                                 </p>
-                                <div className="flex items-center gap-2 mt-2">
-                                  <span className="text-sm text-gray-500 dark:text-gray-400">
+                                <div className="flex items-center gap-2 mt-2.5">
+                                  <span className="text-xs text-gray-500 dark:text-gray-400">
                                     {notification.createdAt.toDate().toLocaleDateString()}
                                   </span>
-                                 <Badge variant="outline" className="text-xs">
+                                 <Badge variant="outline" className="text-xs capitalize">
                                     {notification.type}
                                   </Badge>
                                 </div>

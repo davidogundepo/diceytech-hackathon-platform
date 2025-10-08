@@ -11,6 +11,9 @@ import { FcGoogle } from 'react-icons/fc';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { AccountLinkDialog } from '@/components/AccountLinkDialog';
+import { getSignInMethodsForEmail, linkGoogleAccount, linkPasswordAccount } from '@/services/authService';
+import { loginWithEmail as authLoginWithEmail } from '@/services/authService';
 
 const Index = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -22,6 +25,13 @@ const Index = () => {
   const [fullName, setFullName] = useState('');
   const [username, setUsername] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showLinkDialog, setShowLinkDialog] = useState(false);
+  const [linkContext, setLinkContext] = useState<{
+    existingMethod: 'google' | 'password';
+    newMethod: 'google' | 'password';
+    email: string;
+    password?: string;
+  } | null>(null);
   const { login, register, loginWithGoogle, isAuthenticated, loading } = useAuth();
   const { toast } = useToast();
   const { theme } = useTheme();
@@ -95,6 +105,20 @@ const Index = () => {
         }
       } else {
         if (errorCode === 'auth/email-already-in-use') {
+          // Check what methods are available for this email
+          const methods = await getSignInMethodsForEmail(email);
+          if (methods.includes('google.com')) {
+            // Email exists with Google, offer to link password
+            setLinkContext({
+              existingMethod: 'google',
+              newMethod: 'password',
+              email,
+              password
+            });
+            setShowLinkDialog(true);
+            setIsLoading(false);
+            return;
+          }
           title = "Email already registered";
           description = "This email is already in use. Please sign in instead.";
         } else if (errorCode === 'auth/weak-password') {
@@ -125,7 +149,27 @@ const Index = () => {
         description: "You have successfully signed in with Google.",
       });
       // Navigation will be handled by the useEffect hook
-    } catch (error) {
+    } catch (error: any) {
+      const errorCode = error?.code;
+      
+      // Check if email already exists with password auth
+      if (errorCode === 'auth/account-exists-with-different-credential') {
+        const email = error.customData?.email;
+        if (email) {
+          const methods = await getSignInMethodsForEmail(email);
+          if (methods.includes('password')) {
+            setLinkContext({
+              existingMethod: 'password',
+              newMethod: 'google',
+              email
+            });
+            setShowLinkDialog(true);
+            setIsLoading(false);
+            return;
+          }
+        }
+      }
+      
       toast({
         title: "Google Sign-In failed",
         description: "Please try again.",
@@ -133,6 +177,45 @@ const Index = () => {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleLinkAccounts = async () => {
+    if (!linkContext) return;
+    
+    setShowLinkDialog(false);
+    setIsLoading(true);
+    
+    try {
+      if (linkContext.existingMethod === 'password' && linkContext.newMethod === 'google') {
+        // Sign in with password first, then link Google
+        await authLoginWithEmail(linkContext.email, linkContext.password || '');
+        await linkGoogleAccount();
+      } else if (linkContext.existingMethod === 'google' && linkContext.newMethod === 'password') {
+        // Sign in with Google first (already attempted), then link password
+        await loginWithGoogle();
+        if (linkContext.password) {
+          await linkPasswordAccount(linkContext.password);
+        }
+      }
+      
+      toast({
+        title: "Accounts linked!",
+        description: "You can now sign in with either method.",
+      });
+      
+      // Refresh to update context
+      window.location.reload();
+    } catch (error) {
+      console.error('Account linking error:', error);
+      toast({
+        title: "Linking failed",
+        description: "Unable to link accounts. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+      setLinkContext(null);
     }
   };
 
@@ -158,7 +241,15 @@ const Index = () => {
 
   if (isMobile) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-dicey-azure/10 to-dicey-magenta/10 flex flex-col">
+      <>
+        <AccountLinkDialog
+          open={showLinkDialog}
+          onOpenChange={setShowLinkDialog}
+          existingMethod={linkContext?.existingMethod || 'password'}
+          newMethod={linkContext?.newMethod || 'google'}
+          onConfirm={handleLinkAccounts}
+        />
+        <div className="min-h-screen bg-gradient-to-br from-dicey-azure/10 to-dicey-magenta/10 flex flex-col">
         {/* Mobile Header */}
         <header className="w-full px-4 py-3 flex justify-between items-center">
           <div className="flex items-center gap-3">
@@ -377,10 +468,19 @@ const Index = () => {
           </div>
         </div>
       </div>
+      </>
     );
   }
 
   return (
+    <>
+      <AccountLinkDialog
+        open={showLinkDialog}
+        onOpenChange={setShowLinkDialog}
+        existingMethod={linkContext?.existingMethod || 'password'}
+        newMethod={linkContext?.newMethod || 'google'}
+        onConfirm={handleLinkAccounts}
+      />
     <div className="h-screen bg-white dark:bg-gray-900 relative overflow-hidden">
       <div className="absolute inset-0">
         <div className="absolute top-10 left-10 w-20 h-20 bg-dicey-yellow/15 rounded-full blur-lg"></div>
@@ -690,6 +790,7 @@ const Index = () => {
         </div>
       </div>
     </div>
+    </>
   );
 };
 

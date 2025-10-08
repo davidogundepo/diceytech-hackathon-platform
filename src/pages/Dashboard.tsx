@@ -1,10 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
 import { 
   Trophy, 
   Users, 
@@ -13,7 +16,8 @@ import {
   Award,
   Clock,
   MapPin,
-  Plus
+  Plus,
+  FolderPlus
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { getUserProjects, getRecentHackathons, getUserApplications, getUserHackathonApplicationIds } from '@/services/firestoreService';
@@ -61,7 +65,7 @@ const Dashboard = () => {
         setHackathonsJoinedCount(hackathonIds.length);
         
         // Check if first login - user created within last 5 minutes
-        if (user.createdAt) {
+        if (user.createdAt && typeof user.createdAt === 'object' && 'seconds' in user.createdAt) {
           const createdTime = user.createdAt.seconds * 1000;
           const now = Date.now();
           const fiveMinutes = 5 * 60 * 1000;
@@ -91,6 +95,21 @@ const Dashboard = () => {
     { title: 'Profile Views', value: user?.profileViews?.toString() || '0', badge: 'Coming Soon', icon: Target, color: 'text-green-600' },
   ];
 
+  const container = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+
+  const item = {
+    hidden: { opacity: 0, y: 20 },
+    show: { opacity: 1, y: 0 }
+  };
+
   return (
     <DashboardLayout>
       <WelcomeModal 
@@ -98,60 +117,65 @@ const Dashboard = () => {
         userName={user?.displayName || 'there'}
         onClose={() => setShowWelcomeModal(false)}
       />
-      <div className="space-y-6 animate-fade-in">
-        <div className="bg-dicey-azure rounded-xl p-6 text-white">
-          <div className="flex items-start justify-between">
-            <div>
-              <h1 className="text-2xl font-bold mb-2">
+      <motion.div 
+        className="space-y-8"
+        initial="hidden"
+        animate="show"
+        variants={container}
+      >
+        <motion.div variants={item} className="bg-gradient-to-r from-dicey-azure to-dicey-magenta rounded-xl p-4 sm:p-6 md:p-8 text-white shadow-xl">
+          <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
+            <div className="w-full">
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold mb-2">
                 {isFirstLogin ? 'Welcome' : 'Welcome back'}, {user?.displayName || user?.email || 'User'}! 👋
               </h1>
-              <p className="text-white/90 mb-4">
+              <p className="text-sm sm:text-base text-white/90 mb-4 sm:mb-6">
                 Continue building your tech career with exciting projects and opportunities.
               </p>
-              <div className="flex items-center gap-4">
-                <div className="text-sm">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+                <div className="text-xs sm:text-sm">
                   <span className="text-white/80">Profile Completion: </span>
                   <span className="font-semibold">{user?.profileCompleteness}%</span>
                 </div>
-                <Progress value={user?.profileCompleteness} className="w-32 h-2" />
+                <Progress value={user?.profileCompleteness} className="w-full sm:w-40 h-2 bg-white/20" />
               </div>
             </div>
             <Button 
               variant="secondary" 
               onClick={() => navigate('/profile')}
-              className="bg-dicey-yellow hover:bg-dicey-yellow/90 text-dicey-dark-pink border-dicey-yellow"
+              className="w-full sm:w-auto bg-dicey-yellow hover:bg-dicey-yellow/90 text-dicey-dark-pink border-none transition-smooth hover-lift text-sm sm:text-base whitespace-nowrap"
             >
               Complete Profile
             </Button>
           </div>
-        </div>
+        </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <motion.div variants={item} className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
           {stats.map((stat, index) => (
-            <Card key={index} className="transition-all hover:shadow-md">
-              <CardContent className="p-6">
+            <Card key={index} className="hover-lift transition-smooth border-none shadow-md">
+              <CardContent className="p-3 sm:p-4 md:p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <p className="text-sm font-medium text-gray-600 dark:text-gray-300">{stat.title}</p>
+                    <div className="flex items-center gap-1 sm:gap-2 mb-1">
+                      <p className="text-xs sm:text-sm font-medium text-muted-foreground">{stat.title}</p>
                       {(stat as any).badge && (
-                        <Badge variant="outline" className="text-xs">
+                        <Badge variant="outline" className="text-[10px] sm:text-xs">
                           {(stat as any).badge}
                         </Badge>
                       )}
                     </div>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white">{stat.value}</p>
+                    <p className="text-xl sm:text-2xl md:text-3xl font-bold">{stat.value}</p>
                   </div>
-                  <div className={`p-3 rounded-full bg-gray-100 dark:bg-gray-800 ${stat.color}`}>
-                    <stat.icon className="h-6 w-6" />
+                  <div className={`p-2 sm:p-3 md:p-4 rounded-xl sm:rounded-2xl bg-muted ${stat.color}`}>
+                    <stat.icon className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6" />
                   </div>
                 </div>
               </CardContent>
             </Card>
           ))}
-        </div>
+        </motion.div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
           <div className="lg:col-span-2">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
@@ -169,20 +193,43 @@ const Dashboard = () => {
               </CardHeader>
               <CardContent className="space-y-4">
               {loading ? (
-                <p className="text-gray-500">Loading projects...</p>
+                <div className="space-y-3">
+                  {[1, 2, 3].map(i => (
+                    <div key={i} className="flex gap-4">
+                      <Skeleton className="h-16 w-16 rounded-lg" />
+                      <div className="flex-1 space-y-2">
+                        <Skeleton className="h-4 w-3/4" />
+                        <Skeleton className="h-3 w-1/2" />
+                        <Skeleton className="h-3 w-1/4" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
               ) : projects.length === 0 ? (
-                <p className="text-gray-500">No projects yet. Add your first project!</p>
+                <EmptyState
+                  icon={FolderPlus}
+                  title="No projects yet"
+                  description="Start building your portfolio by adding your first project!"
+                  actionLabel="Add Project"
+                  onAction={() => navigate('/add-project')}
+                />
               ) : projects.map((project) => (
-                  <div key={project.id} className="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer"
-                       onClick={() => navigate(`/project/${project.id}`)}>
+                  <motion.div 
+                    key={project.id} 
+                    className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg hover:bg-muted transition-smooth cursor-pointer hover-lift"
+                    onClick={() => navigate(`/project/${project.id}`)}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
                     <img 
                       src={project.imageUrl || 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=300'} 
                       alt={project.title}
                       className="w-16 h-16 rounded-lg object-cover"
+                      loading="lazy"
                     />
                     <div className="flex-1">
-                      <h4 className="font-semibold text-gray-900 dark:text-white">{project.title}</h4>
-                      <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-1">{project.description}</p>
+                      <h4 className="font-semibold mb-1">{project.title}</h4>
+                      <p className="text-sm text-muted-foreground truncate-2">{project.description}</p>
                       <div className="flex items-center gap-2 mt-2">
                         {project.status && (
                           <Badge variant={project.status === 'published' ? 'default' : 'secondary'} className="bg-dicey-magenta text-white">
@@ -193,15 +240,15 @@ const Dashboard = () => {
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm text-gray-500">Created</p>
+                      <p className="text-xs text-muted-foreground">Created</p>
                       <p className="text-sm font-medium">{new Date(project.createdAt.seconds * 1000).toLocaleDateString()}</p>
                     </div>
-                  </div>
+                  </motion.div>
                 ))}
                 
                 <Button 
                   variant="ghost" 
-                  className="w-full border-2 border-dashed border-gray-300 h-20 hover:border-dicey-azure hover:bg-dicey-azure/10"
+                  className="w-full border-2 border-dashed border-border h-20 hover:border-dicey-azure hover:bg-dicey-azure/10 transition-smooth"
                   onClick={() => navigate('/add-project')}
                 >
                   <Plus className="mr-2 h-5 w-5" />
@@ -221,17 +268,32 @@ const Dashboard = () => {
               </CardHeader>
               <CardContent className="space-y-3">
                 {loading ? (
-                  <p className="text-gray-500">Loading events...</p>
+                  <div className="space-y-3">
+                    {[1, 2, 3].map(i => (
+                      <div key={i} className="space-y-2">
+                        <Skeleton className="h-4 w-full" />
+                        <Skeleton className="h-3 w-3/4" />
+                        <Skeleton className="h-3 w-1/2" />
+                      </div>
+                    ))}
+                  </div>
                 ) : hackathons.length === 0 ? (
-                  <p className="text-gray-500">No upcoming hackathons.</p>
+                  <p className="text-muted-foreground text-center py-4">No upcoming hackathons.</p>
                 ) : hackathons.map((event, index) => (
-                  <div key={index} className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                  <motion.div 
+                    key={index} 
+                    className="p-4 bg-muted/50 rounded-lg hover:bg-muted transition-smooth cursor-pointer hover-lift"
+                    onClick={() => navigate(`/hackathon/${event.id}`)}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                  >
                     <div className="flex items-start justify-between mb-2">
-                      <h5 className="font-medium text-sm">{event.title}</h5>
+                      <h5 className="font-semibold text-sm">{event.title}</h5>
                       <Badge variant="outline" className="text-xs">{event.category}</Badge>
                     </div>
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mb-2 line-clamp-2">{event.description}</p>
-                    <div className="space-y-1 text-xs text-gray-600 dark:text-gray-400">
+                    <p className="text-xs text-muted-foreground mb-3 truncate-2">{event.description}</p>
+                    <div className="space-y-1 text-xs text-muted-foreground">
                       <div className="flex items-center gap-1">
                         <Clock className="h-3 w-3" />
                         {new Date(event.startDate.seconds * 1000).toLocaleDateString()}
@@ -241,7 +303,7 @@ const Dashboard = () => {
                         {event.participantCount || 0} participants
                       </div>
                     </div>
-                  </div>
+                  </motion.div>
                 ))}
                 <Button variant="ghost" size="sm" className="w-full" onClick={() => navigate('/hackathons')}>
                   View All Hackathons
@@ -293,7 +355,7 @@ const Dashboard = () => {
             </Card>
           </div>
         </div>
-      </div>
+      </motion.div>
     </DashboardLayout>
   );
 };

@@ -35,6 +35,7 @@ export interface User {
   goal?: string;
   experience?: WorkExperience[];
   education?: Education[];
+  linkedAccounts?: string[];
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }

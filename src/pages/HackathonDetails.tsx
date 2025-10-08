@@ -19,7 +19,7 @@ import {
   CheckCircle2
 } from "lucide-react";
 import { useAuth } from '@/contexts/AuthContext';
-import { getHackathonById, createApplication, toggleSaveHackathon, getUserSavedHackathonIds } from '@/services/firestoreService';
+import { getHackathonById, createApplication, toggleSaveHackathon, getUserSavedHackathonIds, hasUserAppliedToHackathon } from '@/services/firestoreService';
 import { sendApplicationConfirmation } from '@/services/emailService';
 import { Hackathon } from '@/types/firestore';
 import { useToast } from '@/hooks/use-toast';
@@ -34,6 +34,7 @@ const HackathonDetails = () => {
   const [applying, setApplying] = useState(false);
   const [showApplyForm, setShowApplyForm] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
+  const [hasApplied, setHasApplied] = useState(false);
   const [formData, setFormData] = useState({
     teamName: '',
     teamSize: '',
@@ -52,6 +53,10 @@ const HackathonDetails = () => {
         if (user) {
           const savedIds = await getUserSavedHackathonIds(user.id);
           setIsSaved(savedIds.includes(id));
+          
+          // Check if user has already applied
+          const applied = await hasUserAppliedToHackathon(user.id, id);
+          setHasApplied(applied);
         }
       } catch (error) {
         console.error('Error fetching hackathon:', error);
@@ -111,6 +116,7 @@ const HackathonDetails = () => {
       });
 
       setShowApplyForm(false);
+      setHasApplied(true);
       setFormData({
         teamName: '',
         teamSize: '',
@@ -305,13 +311,30 @@ const HackathonDetails = () => {
                 <CardTitle>Apply Now</CardTitle>
               </CardHeader>
               <CardContent>
-                {!showApplyForm ? (
+                {hasApplied ? (
+                  <div className="space-y-4 text-center py-4">
+                    <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto" />
+                    <div>
+                      <h3 className="font-semibold text-lg mb-2">Application Submitted</h3>
+                      <p className="text-sm text-muted-foreground">
+                        You've already applied to this hackathon. We'll notify you about updates.
+                      </p>
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      className="w-full" 
+                      onClick={() => navigate('/my-applications')}
+                    >
+                      View My Applications
+                    </Button>
+                  </div>
+                ) : !showApplyForm ? (
                   <div className="space-y-4">
                     <p className="text-sm text-gray-600 dark:text-gray-300">
                       Interested in participating? Submit your application to join this hackathon.
                     </p>
                     <Button 
-                      className="w-full" 
+                      className="w-full bg-dicey-azure hover:bg-dicey-azure/90" 
                       onClick={() => setShowApplyForm(true)}
                       disabled={isPast}
                     >
@@ -371,7 +394,11 @@ const HackathonDetails = () => {
                       />
                     </div>
                     <div className="flex gap-2">
-                      <Button type="submit" className="flex-1" disabled={applying}>
+                      <Button 
+                        type="submit" 
+                        className="flex-1 bg-dicey-azure hover:bg-dicey-azure/90" 
+                        disabled={applying}
+                      >
                         {applying ? 'Submitting...' : 'Submit Application'}
                       </Button>
                       <Button 

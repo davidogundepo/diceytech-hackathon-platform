@@ -22,7 +22,9 @@ import { toast } from "@/hooks/use-toast";
 import { SkillsSelector } from "@/components/SkillsSelector";
 import { ExperienceForm } from "@/components/ExperienceForm";
 import { EducationForm } from "@/components/EducationForm";
+import { ConnectedAccounts } from "@/components/ConnectedAccounts";
 import { WorkExperience, Education } from "@/types/firestore";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 const Profile = () => {
   const { user } = useAuth();
@@ -539,6 +541,49 @@ const Profile = () => {
                   onChange={(edu) => setProfileData(prev => ({ ...prev, education: edu }))}
                   isEditing={isEditing}
                 />
+              </CardContent>
+            </Card>
+
+            {/* Connected Accounts */}
+            <ConnectedAccounts />
+
+            {/* Danger Zone */}
+            <Card className="border-destructive/20">
+              <CardHeader>
+                <CardTitle className="text-red-600 dark:text-red-400">Danger Zone</CardTitle>
+                <CardDescription>This action is irreversible. Deleting your account will permanently remove all your data.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive">Delete my account</Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete your account?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This action cannot be undone. This will permanently delete your account and all associated data from DiceyTech.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={async () => {
+                        try {
+                          const { deleteCurrentUserAccount } = await import('@/services/accountService');
+                          await deleteCurrentUserAccount();
+                          toast({ title: 'Account deleted', description: 'We\'re sorry to see you go.' });
+                          window.location.href = '/';
+                        } catch (e: any) {
+                          console.error('Delete account failed', e);
+                          const msg = e?.code === 'auth/requires-recent-login'
+                            ? 'Please sign in again, then retry deleting your account.'
+                            : 'Failed to delete account. Please try again.';
+                          toast({ title: 'Error', description: msg, variant: 'destructive' });
+                        }
+                      }}>Delete</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </CardContent>
             </Card>
           </div>

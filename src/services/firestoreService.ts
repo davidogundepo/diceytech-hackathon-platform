@@ -424,3 +424,26 @@ export const searchProjects = async (searchTerm: string): Promise<Project[]> => 
     project.techStack.some(tech => tech.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 };
+
+// Host Hackathon Requests
+export const createHostRequest = async (data: {
+  userId: string | null;
+  companyName: string;
+  contactName?: string;
+  contactEmail: string;
+  phone?: string;
+  eventTitle: string;
+  location?: string;
+  address?: string;
+  date: string; // ISO string
+  participants?: number;
+  budget?: number;
+  description?: string;
+}): Promise<string> => {
+  const docRef = await addDoc(collection(db, 'host_requests'), {
+    ...data,
+    status: 'pending',
+    createdAt: Timestamp.now(),
+  });
+  return docRef.id;
+};
