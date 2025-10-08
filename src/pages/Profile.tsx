@@ -179,15 +179,14 @@ const Profile = () => {
       await updateUser(user.id, { photoURL });
       
       // Update local state
-      setProfileData(prev => ({ ...prev, photoURL }));
+      const updatedData = { ...profileData, photoURL };
+      setProfileData(updatedData);
+      setOriginalData(updatedData);
       
       toast({
         title: "Profile picture updated ✅",
         description: "Your avatar has been successfully uploaded",
       });
-
-      // Reload to sync with auth context
-      setTimeout(() => window.location.reload(), 1000);
     } catch (error) {
       console.error('Avatar upload error:', error);
       toast({
@@ -226,15 +225,15 @@ const Profile = () => {
         profileCompleteness: completeness
       });
       
+      // Update original data to match saved data
+      setOriginalData(profileData);
+      setIsDirty(false);
+      setIsEditing(false);
+      
       toast({
         title: "Profile updated ✅",
         description: `Your profile is now ${completeness}% complete!`,
       });
-      setIsDirty(false);
-      setIsEditing(false);
-      
-      // Reload data to ensure sync
-      window.location.reload();
     } catch (error) {
       console.error('Save error:', error);
       toast({
