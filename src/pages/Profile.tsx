@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -25,15 +25,12 @@ import { EducationForm } from "@/components/EducationForm";
 import { ConnectedAccounts } from "@/components/ConnectedAccounts";
 import { WorkExperience, Education } from "@/types/firestore";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { useBlocker } from 'react-router';
 
 const Profile = () => {
   const { user } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
-  const [isDirty, setIsDirty] = useState(false);
-  const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [profileData, setProfileData] = useState({
     name: '',
@@ -51,13 +48,6 @@ const Profile = () => {
     education: [] as Education[],
     photoURL: ''
   });
-  const [originalData, setOriginalData] = useState(profileData);
-
-  // Block navigation when form is dirty
-  const blocker = useBlocker(
-    ({ currentLocation, nextLocation }) =>
-      isDirty && isEditing && currentLocation.pathname !== nextLocation.pathname
-  );
 
   // Load user data from Firestore
   useEffect(() => {
@@ -69,7 +59,7 @@ const Profile = () => {
           const userData = await getUserById(user.id);
           
           if (userData) {
-            const data = {
+            setProfileData({
               name: userData.displayName || '',
               email: userData.email,
               bio: userData.bio || '',
@@ -84,9 +74,7 @@ const Profile = () => {
               experience: userData.experience || [],
               education: userData.education || [],
               photoURL: userData.photoURL || ''
-            };
-            setProfileData(data);
-            setOriginalData(data);
+            });
           }
         } catch (error) {
           console.error('Error loading user data:', error);
@@ -99,45 +87,9 @@ const Profile = () => {
     loadUserData();
   }, [user]);
 
-  // Warn before leaving page with unsaved changes
-  useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (isDirty && isEditing) {
-        e.preventDefault();
-        e.returnValue = '';
-      }
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [isDirty, isEditing]);
-
-  // Check if data has changed
-  useEffect(() => {
-    if (isEditing) {
-      const hasChanged = JSON.stringify(profileData) !== JSON.stringify(originalData);
-      setIsDirty(hasChanged);
-    }
-  }, [profileData, originalData, isEditing]);
-
   const handleInputChange = (field: string, value: string) => {
     setProfileData(prev => ({ ...prev, [field]: value }));
   };
-
-  const handleCancelEdit = useCallback(() => {
-    if (isDirty) {
-      setShowUnsavedDialog(true);
-    } else {
-      setIsEditing(false);
-    }
-  }, [isDirty]);
-
-  const confirmCancelEdit = useCallback(() => {
-    setProfileData(originalData);
-    setIsDirty(false);
-    setIsEditing(false);
-    setShowUnsavedDialog(false);
-  }, [originalData]);
 
   const handleAvatarClick = () => {
     fileInputRef.current?.click();
@@ -179,14 +131,15 @@ const Profile = () => {
       await updateUser(user.id, { photoURL });
       
       // Update local state
-      const updatedData = { ...profileData, photoURL };
-      setProfileData(updatedData);
-      setOriginalData(updatedData);
+      setProfileData(prev => ({ ...prev, photoURL }));
       
       toast({
         title: "Profile picture updated ✅",
         description: "Your avatar has been successfully uploaded",
       });
+
+      // Reload to sync with auth context
+      setTimeout(() => window.location.reload(), 1000);
     } catch (error) {
       console.error('Avatar upload error:', error);
       toast({
@@ -225,15 +178,14 @@ const Profile = () => {
         profileCompleteness: completeness
       });
       
-      // Update original data to match saved data
-      setOriginalData(profileData);
-      setIsDirty(false);
-      setIsEditing(false);
-      
       toast({
         title: "Profile updated ✅",
         description: `Your profile is now ${completeness}% complete!`,
       });
+      setIsEditing(false);
+      
+      // Reload data to ensure sync
+      window.location.reload();
     } catch (error) {
       console.error('Save error:', error);
       toast({
@@ -287,7 +239,7 @@ const Profile = () => {
           <div className="flex gap-2">
             {isEditing ? (
               <>
-                <Button variant="outline" onClick={handleCancelEdit} disabled={loading} className="border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-800">
+                <Button variant="outline" onClick={() => setIsEditing(false)} disabled={loading} className="border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-800">
                   Cancel
                 </Button>
                 <Button onClick={handleSave}   className="bg-dicey-teal hover:bg-dicey-teal/90 text-black dark:text-white border border-black dark:border-white rounded-md" disabled={loading}>
@@ -636,45 +588,6 @@ const Profile = () => {
             </Card>
           </div>
         </div>
-
-        {/* Unsaved Changes Dialog */}
-        <AlertDialog open={showUnsavedDialog} onOpenChange={setShowUnsavedDialog}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Unsaved Changes</AlertDialogTitle>
-              <AlertDialogDescription>
-                You have unsaved changes. Are you sure you want to leave? Your changes will be lost.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Continue Editing</AlertDialogCancel>
-              <AlertDialogAction onClick={confirmCancelEdit} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                Discard Changes
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-
-        {/* Navigation Blocker Dialog */}
-        <AlertDialog open={blocker?.state === 'blocked'} onOpenChange={() => blocker?.state === 'blocked' && blocker.reset?.()}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Unsaved Changes</AlertDialogTitle>
-              <AlertDialogDescription>
-                You have unsaved changes. Are you sure you want to leave this page? Your changes will be lost.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel onClick={() => blocker?.reset?.()}>Stay on Page</AlertDialogCancel>
-              <AlertDialogAction 
-                onClick={() => blocker?.proceed?.()} 
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              >
-                Leave Page
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
       </div>
     </DashboardLayout>
   );
