@@ -25,7 +25,7 @@ import { EducationForm } from "@/components/EducationForm";
 import { ConnectedAccounts } from "@/components/ConnectedAccounts";
 import { WorkExperience, Education } from "@/types/firestore";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { useBlocker } from 'react-router-dom';
+import { useBlocker } from 'react-router';
 
 const Profile = () => {
   const { user } = useAuth();
@@ -656,7 +656,7 @@ const Profile = () => {
         </AlertDialog>
 
         {/* Navigation Blocker Dialog */}
-        <AlertDialog open={blocker.state === 'blocked'} onOpenChange={() => blocker.state === 'blocked' && blocker.reset?.()}>
+        <AlertDialog open={blocker?.state === 'blocked'} onOpenChange={() => blocker?.state === 'blocked' && blocker.reset?.()}>
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Unsaved Changes</AlertDialogTitle>
@@ -665,9 +665,9 @@ const Profile = () => {
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel onClick={() => blocker.reset?.()}>Stay on Page</AlertDialogCancel>
+              <AlertDialogCancel onClick={() => blocker?.reset?.()}>Stay on Page</AlertDialogCancel>
               <AlertDialogAction 
-                onClick={() => blocker.proceed?.()} 
+                onClick={() => blocker?.proceed?.()} 
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
                 Leave Page
