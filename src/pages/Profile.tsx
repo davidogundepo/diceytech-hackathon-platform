@@ -25,7 +25,6 @@ import { EducationForm } from "@/components/EducationForm";
 import { ConnectedAccounts } from "@/components/ConnectedAccounts";
 import { WorkExperience, Education } from "@/types/firestore";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { useBlocker } from 'react-router';
 
 const Profile = () => {
   const { user } = useAuth();
@@ -52,12 +51,6 @@ const Profile = () => {
     photoURL: ''
   });
   const [originalData, setOriginalData] = useState(profileData);
-
-  // Block navigation when form is dirty
-  const blocker = useBlocker(
-    ({ currentLocation, nextLocation }) =>
-      isDirty && isEditing && currentLocation.pathname !== nextLocation.pathname
-  );
 
   // Load user data from Firestore
   useEffect(() => {
@@ -650,27 +643,6 @@ const Profile = () => {
               <AlertDialogCancel>Continue Editing</AlertDialogCancel>
               <AlertDialogAction onClick={confirmCancelEdit} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
                 Discard Changes
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-
-        {/* Navigation Blocker Dialog */}
-        <AlertDialog open={blocker?.state === 'blocked'} onOpenChange={() => blocker?.state === 'blocked' && blocker.reset?.()}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Unsaved Changes</AlertDialogTitle>
-              <AlertDialogDescription>
-                You have unsaved changes. Are you sure you want to leave this page? Your changes will be lost.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel onClick={() => blocker?.reset?.()}>Stay on Page</AlertDialogCancel>
-              <AlertDialogAction 
-                onClick={() => blocker?.proceed?.()} 
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              >
-                Leave Page
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
